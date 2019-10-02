@@ -39,3 +39,9 @@ ftp_func[NUM_COMMANDS] = {
     RNTO_func,
     REST_func,
 };
+
+int USER_func(int fd, char* buffer)
+{
+    
+    return 0;
+}

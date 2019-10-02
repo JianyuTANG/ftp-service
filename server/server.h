@@ -16,15 +16,22 @@
 #define DIRECTORY_SIZE 200
 #define BUFFER_SIZE 2048
 #define NUM_COMMANDS 17
-
 #define CONTROL_PORT 21
+#define MAX_CLIENT_NUM 500
+
+typedef struct Connection
+{
+    int fd;
+    char current_directory[DIRECTORY_SIZE];
+    int login_status;
+} Connection;
 
 extern int server_port;
-extern char root_path[DIRECTORY_SIZE];
+extern char default_path[DIRECTORY_SIZE];
 
 extern char *commands[];
-
 extern int (*ftp_func[NUM_COMMANDS])(int fd, char* buffer);
+
 
 int USER_func(int fd, char* buffer);
 int PASS_func(int fd, char* buffer);
@@ -43,5 +50,9 @@ int RMD_func(int fd, char* buffer);
 int RNFR_func(int fd, char* buffer);
 int RNTO_func(int fd, char* buffer);
 int REST_func(int fd, char* buffer);
+
+extern Connection *connection[MAX_CLIENT_NUM];
+void register_connection(int fd, Connection* p);
+Connection* get_connection(int fd);
 
 #endif

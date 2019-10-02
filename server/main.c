@@ -19,7 +19,7 @@ int main(int argc, char **argv)
         }
         else if(!strcmp(argv[1], "-root"))
         {
-            strcpy(root_path, argv[2]);
+            strcpy(default_path, argv[2]);
         }
         else
         {
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
             if(!strcmp(argv[3], "-root"))
             {
                 server_port = atoi(argv[2]);
-                strcpy(root_path, argv[4]);
+                strcpy(default_path, argv[4]);
             }
             else
             {
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
             if(!strcmp(argv[3], "-port"))
             {
                 server_port = atoi(argv[4]);
-                strcpy(root_path, argv[2]);
+                strcpy(default_path, argv[2]);
             }
             else
             {
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     else
     {
         server_port = 21;
-        strcpy(root_path, "/tmp");
+        strcpy(default_path, "/tmp");
     }
     
     // build socket
@@ -118,6 +118,11 @@ int main(int argc, char **argv)
             {
                 client_sockfd = accept(server_sockfd, (struct sockaddr *) &client_addr, &sizeof(client_addr));
                 FD_SET(client_sockfd, &readfds);
+                Connection* c = (Connection*)malloc(sizeof(Connection));
+                c->fd = client_sockfd;
+                strcpy(c->current_directory, default_path);
+                c->login_status = 0; // unlogged
+                register_connection(client_sockfd, c);
             }
             else
             {

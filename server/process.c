@@ -1,5 +1,7 @@
 #include "server.h"
 
+Connection *connection[MAX_CLIENT_NUM] = {NULL};
+
 int process(int fd)
 {
     // read the command
