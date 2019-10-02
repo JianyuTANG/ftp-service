@@ -123,6 +123,13 @@ int main(int argc, char **argv)
             {
                 ioctl(fd, FIONREAD, &nread);
                 // process
+                if(nread == 0)
+				{
+					close(fd);
+					FD_CLR(fd, &readfds);
+					printf("removing client on fd %d/n", fd);
+                    continue;
+				}
                 process(fd);
             }
             
