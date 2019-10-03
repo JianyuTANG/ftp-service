@@ -19,11 +19,28 @@
 #define CONTROL_PORT 21
 #define MAX_CLIENT_NUM 500
 
+typedef enum TransmitStatus
+{
+    NONE,
+    READY,
+    TRANSMITTING,
+    START_RENAME
+}transmitStatus;
+
+typedef enum LoginStatus
+{
+    OUT,
+    USERNAME_OK,
+    LOGGED_IN
+}loginStatus;
+
 typedef struct Connection
 {
     int fd;
     char current_directory[DIRECTORY_SIZE];
-    int login_status;
+    char current_renaming_filename[DIRECTORY_SIZE];
+    loginStatus login_status;
+    transmitStatus transmit_status;
 } Connection;
 
 extern int server_port;
@@ -54,5 +71,14 @@ int REST_func(int fd, char* buffer);
 extern Connection *connection[MAX_CLIENT_NUM];
 void register_connection(int fd, Connection* p);
 Connection* get_connection(int fd);
+
+int emit_message(int fd, char *msg);
+
+int get_current_directory(char *buffer);
+int change_working_directory(char *tgt_directory, char *current_directory);
+int make_dir(char *dirname, char *current_directory);
+int remove_dir(char *dirname, char *current_directory);
+int is_file(char *filename);
+int rename_file(char *tgt_filename, char *src_filename);
 
 #endif

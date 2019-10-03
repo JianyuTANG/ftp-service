@@ -25,3 +25,14 @@ Connection* get_connection(int fd)
     }
     return 0;
 }
+
+int emit_message(int fd, char *msg)
+{
+    int result = 0;
+    result = write(fd, msg, strlen(msg));
+    if(result < 0)
+    {
+        return 0;
+    }
+    return 1;
+}
