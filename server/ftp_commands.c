@@ -228,6 +228,17 @@ int PORT_func(int fd, char* buffer)
 
 int PASV_func(int fd, char* buffer)
 {
+    Connection* c = get_connection(fd);
+    if(c->login_status < LOGGED_IN)
+    {
+        return emit_message(fd, "530 Hasn't logged in yet.\r\n");
+    }
+    if(buffer[4] == ' ')
+    {
+        // No parameters are allowed for PASV.
+        return emit_message(fd, "500 Unknown command!\r\n");
+    }
+    c->transmit_status = READY_PASV;
 
 }
 

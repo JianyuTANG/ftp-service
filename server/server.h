@@ -22,7 +22,8 @@
 typedef enum TransmitStatus
 {
     NONE,
-    READY,
+    READY_PASV,
+    READY_PORT,
     TRANSMITTING,
     START_RENAME
 }transmitStatus;
