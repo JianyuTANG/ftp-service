@@ -228,6 +228,69 @@ int PORT_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
+
+    // close existed connection
+    if(c->transmit_status == READY_PASV)
+    {
+        close(c->transmit_fd);
+    }
+
+    // resolve parameters
+    if(buffer[4] != ' ')
+    {
+        // Need parameters
+        return emit_message(fd, "500 Unknown command!\r\n");
+    }
+    int cursor = 5;
+    for(int i = 0; i < 4; i++)
+    {
+        // get ip address
+        int p = 0;
+        while(*(buffer + cursor + p) != ',' && *(buffer + cursor + p) != '\0')
+        {
+            p++;
+        }
+        if(*(buffer + cursor + p) == ',')
+        {
+            *(buffer + cursor + p) = '\0';
+            c->client_ip[i] = atoi(buffer + cursor);
+            cursor += p + 1;
+        }
+        else
+        {
+            // Wrong format
+            return emit_message(fd, "500 Unknown command!\r\n");
+        }
+    }
+    int port = 0;
+    for(int i = 0; i < 2; i++)
+    {
+        // get port
+        int p = 0;
+        while(*(buffer + cursor + p) != ',' && *(buffer + cursor + p) != '\0')
+        {
+            p++;
+        }
+        if(i == 0 && *(buffer + cursor + p) == ',')
+        {
+            *(buffer + cursor + p) = '\0';
+            port += atoi(buffer + cursor) * 256;
+            cursor += p + 1;
+        }
+        else if(i == 1 && *(buffer + cursor + p) == '\0')
+        {
+            port += atoi(buffer + cursor);
+            cursor += p + 1;
+        }
+        else
+        {
+            // Wrong format
+            return emit_message(fd, "500 Unknown command!\r\n");
+        }
+    }
+    c->client_port = port;
+    c->transmit_status = READY_PORT;
+    return emit_message(fd, "200 Port accepted!\r\n");
 }
 
 int PASV_func(int fd, char* buffer)
@@ -242,16 +305,21 @@ int PASV_func(int fd, char* buffer)
         // No parameters are allowed for PASV.
         return emit_message(fd, "500 Unknown command!\r\n");
     }
-    c->transmit_status = READY_PASV;
-    
+
+    // close existed connection
+    if(c->transmit_status == READY_PASV)
+    {
+        close(c->transmit_fd);
+    }
+
+    // establish new connection
     // build socket
     int server_sockfd;
     struct sockaddr_in server_addr;
     server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(server_sockfd < 0)
     {
-        printf("ERROR: Fail to build socket.\n");
-        return 0;
+        return emit_message(fd, "550 Fail to build socket!");
     }
     // bind port
     bzero(&server_addr, sizeof(server_addr));
@@ -261,14 +329,17 @@ int PASV_func(int fd, char* buffer)
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if(bind(serverSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        printf("ERROR: Fail to bind the port 21.\n");
-        return 0;
+        return emit_message(fd, "550 Fail to build socket!");
     }
     if (listen(server_sockfd, 10) < 0)
 	{
-		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
-		return 0;
+		return emit_message(fd, "550 Fail to build socket!");
 	}
+
+    //update status
+    c->transmit_status = READY_PASV;
+    c->transmit_port = port;
+    c->transmit_fd = server_sockfd;
 
     char ret_msg[DIRECTORY_SIZE];
     char h[4][10];
@@ -279,7 +350,7 @@ int PASV_func(int fd, char* buffer)
     char p[2][10];
     itoa(p[0], port / 256, 10);
     itoa(p[1], port % 256, 10);
-    sprintf(ret_msg, "227 =", h[0], h[1], h[2], h[3], p[0], p[1]);
+    sprintf(ret_msg, "227 =", h[0], ",", h[1], ",", h[2], ",", h[3], ",", p[0], ",", p[1]);
     return emit_message(fd, ret_msg);
 }
 

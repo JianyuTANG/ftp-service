@@ -42,6 +42,10 @@ typedef struct Connection
     char current_renaming_filename[DIRECTORY_SIZE];
     loginStatus login_status;
     transmitStatus transmit_status;
+    int transmit_fd;
+    int transmit_port;
+    int client_ip[4];
+    int client_port;
 } Connection;
 
 extern int server_port;
