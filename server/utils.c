@@ -36,3 +36,8 @@ int emit_message(int fd, char *msg)
     }
     return 1;
 }
+
+int get_available_port()
+{
+    
+}

@@ -46,6 +46,7 @@ typedef struct Connection
 
 extern int server_port;
 extern char default_path[DIRECTORY_SIZE];
+extern int my_ip[4];
 
 extern char *commands[];
 extern int (*ftp_func[NUM_COMMANDS])(int fd, char* buffer);
@@ -72,6 +73,8 @@ int REST_func(int fd, char* buffer);
 extern Connection *connection[MAX_CLIENT_NUM];
 void register_connection(int fd, Connection* p);
 Connection* get_connection(int fd);
+int get_available_port();
+char[] get_my_ip();
 
 int emit_message(int fd, char *msg);
 

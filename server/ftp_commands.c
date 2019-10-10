@@ -223,7 +223,11 @@ int LIST_func(int fd, char* buffer)
 
 int PORT_func(int fd, char* buffer)
 {
-
+    Connection* c = get_connection(fd);
+    if(c->login_status < LOGGED_IN)
+    {
+        return emit_message(fd, "530 Hasn't logged in yet.\r\n");
+    }
 }
 
 int PASV_func(int fd, char* buffer)
@@ -239,12 +243,48 @@ int PASV_func(int fd, char* buffer)
         return emit_message(fd, "500 Unknown command!\r\n");
     }
     c->transmit_status = READY_PASV;
+    
+    // build socket
+    int server_sockfd;
+    struct sockaddr_in server_addr;
+    server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if(server_sockfd < 0)
+    {
+        printf("ERROR: Fail to build socket.\n");
+        return 0;
+    }
+    // bind port
+    bzero(&server_addr, sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+    int port = get_available_port();
+	server_addr.sin_port = htons(port);
+	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if(bind(serverSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        printf("ERROR: Fail to bind the port 21.\n");
+        return 0;
+    }
+    if (listen(server_sockfd, 10) < 0)
+	{
+		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
+		return 0;
+	}
 
+    char ret_msg[DIRECTORY_SIZE];
+    char h[4][10];
+    for(int i=0; i < 4; i++)
+    {
+        itoa(h[i], my_ip[i], 10);
+    }
+    char p[2][10];
+    itoa(p[0], port / 256, 10);
+    itoa(p[1], port % 256, 10);
+    sprintf(ret_msg, "227 =", h[0], h[1], h[2], h[3], p[0], p[1]);
+    return emit_message(fd, ret_msg);
 }
 
 int RETR_func(int fd, char* buffer)
 {
-
 }
 
 int STOR_func(int fd, char* buffer)

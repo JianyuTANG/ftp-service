@@ -3,6 +3,7 @@
 
 int main(int argc, char **argv)
 {
+    int server_port;
     // process arugments
     if(argc != 1 && argc != 5 && argc != 3)
     {
@@ -88,7 +89,7 @@ int main(int argc, char **argv)
     if (listen(server_sockfd, 10) < 0)
 	{
 		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
-		return 1;
+		return 0;
 	}
 
     fd_set readfds, testfds;
