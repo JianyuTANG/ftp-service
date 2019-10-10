@@ -219,6 +219,31 @@ int LIST_func(int fd, char* buffer)
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
 
+    // ensure connection established
+    if(c->transmit_status == READY_PASV)
+    {
+        ;
+    }
+    else if(c->transmit_status == READY_PORT)
+    {
+        c->transmit_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if(c->transmit_fd < 0)
+        {
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+        struct sockaddr_in client_addr;
+        client_addr.sin_family = AF_INET;
+        client_addr.sin_port = htons(c->client_port);
+        client_addr.sin_addr.s_addr = inet_addr(c->client_ip);
+        if(connect(clientSocket, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+        {
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+    }
+    else
+    {
+        return emit_message(fd, "425 Data connection not available!\r\n");
+    }
 }
 
 int PORT_func(int fd, char* buffer)
@@ -242,9 +267,10 @@ int PORT_func(int fd, char* buffer)
         return emit_message(fd, "500 Unknown command!\r\n");
     }
     int cursor = 5;
+    // get ip address
+    strcpy(c->client_ip, "");
     for(int i = 0; i < 4; i++)
     {
-        // get ip address
         int p = 0;
         while(*(buffer + cursor + p) != ',' && *(buffer + cursor + p) != '\0')
         {
@@ -253,7 +279,7 @@ int PORT_func(int fd, char* buffer)
         if(*(buffer + cursor + p) == ',')
         {
             *(buffer + cursor + p) = '\0';
-            c->client_ip[i] = atoi(buffer + cursor);
+            sprintf(c->client_ip, c->client_ip, buffer + cursor);
             cursor += p + 1;
         }
         else
@@ -261,11 +287,15 @@ int PORT_func(int fd, char* buffer)
             // Wrong format
             return emit_message(fd, "500 Unknown command!\r\n");
         }
+        if(i < 3)
+        {
+            sprintf(c->client_ip, c->client_ip, ".");
+        }
     }
+    // get port
     int port = 0;
     for(int i = 0; i < 2; i++)
     {
-        // get port
         int p = 0;
         while(*(buffer + cursor + p) != ',' && *(buffer + cursor + p) != '\0')
         {
@@ -356,6 +386,50 @@ int PASV_func(int fd, char* buffer)
 
 int RETR_func(int fd, char* buffer)
 {
+    Connection* c = get_connection(fd);
+    if(c->login_status < LOGGED_IN)
+    {
+        return emit_message(fd, "530 Hasn't logged in yet.\r\n");
+    }
+
+    // check parameter
+    if(buffer[4] != ' ')
+    {
+        // Need parameters
+        return emit_message(fd, "500 Unknown command!\r\n");
+    }
+    if(!is_file(buffer + 5))
+    {
+        return emit_message(fd, "550 File does not exist!\r\n");
+    }
+
+    // ensure connection established
+    if(c->transmit_status == READY_PASV)
+    {
+        ;
+    }
+    else if(c->transmit_status == READY_PORT)
+    {
+        c->transmit_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if(c->transmit_fd < 0)
+        {
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+        struct sockaddr_in client_addr;
+        client_addr.sin_family = AF_INET;
+        client_addr.sin_port = htons(c->client_port);
+        client_addr.sin_addr.s_addr = inet_addr(c->client_ip);
+        if(connect(clientSocket, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+        {
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+    }
+    else
+    {
+        return emit_message(fd, "425 Data connection not available!\r\n");
+    }
+
+    // start transmitting data
 }
 
 int STOR_func(int fd, char* buffer)

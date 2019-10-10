@@ -44,7 +44,7 @@ typedef struct Connection
     transmitStatus transmit_status;
     int transmit_fd;
     int transmit_port;
-    int client_ip[4];
+    char client_ip[100];
     int client_port;
 } Connection;
 
