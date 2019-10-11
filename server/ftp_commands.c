@@ -110,6 +110,10 @@ int PWD_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
+    char ret_msg[DIRECTORY_SIZE];
+    sprintf(ret_msg, "257 \"", c->current_directory, "\"\r\n");
+    return emit_message(fd, ret_msg);
+    /*
     char current_directory[DIRECTORY_SIZE];
     if(get_current_directory(current_directory))   // TODO change the func
     {
@@ -118,6 +122,7 @@ int PWD_func(int fd, char* buffer)
         return emit_message(fd, ret_msg);
     }
     return emit_message(fd, "550 Fail to print the directory.\r\n");
+    */
 }
 
 int CWD_func(int fd, char* buffer)
@@ -127,7 +132,7 @@ int CWD_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
-    if(change_working_directory(buffer + 4, c->current_directory))
+    if(change_working_directory(buffer + 4, c))
     {
         return emit_message(fd, "250 Okay.\r\n");
     }
@@ -430,6 +435,7 @@ int RETR_func(int fd, char* buffer)
     }
 
     // start transmitting data
+
 }
 
 int STOR_func(int fd, char* buffer)

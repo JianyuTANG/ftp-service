@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <sys/select.h>
 #include <strings.h>
 
@@ -82,11 +83,11 @@ char[] get_my_ip();
 
 int emit_message(int fd, char *msg);
 
-int get_current_directory(char *buffer);
-int change_working_directory(char *tgt_directory, char *current_directory);
+int change_working_directory(char *tgt_directory, Connection *c);
 int make_dir(char *dirname, char *current_directory);
 int remove_dir(char *dirname, char *current_directory);
 int is_file(char *filename);
 int rename_file(char *tgt_filename, char *src_filename);
+int join_path(char *source, char *target);
 
 #endif
