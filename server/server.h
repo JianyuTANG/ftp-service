@@ -86,7 +86,7 @@ int emit_message(int fd, char *msg);
 int change_working_directory(char *tgt_directory, Connection *c);
 int make_dir(char *dirname, char *current_directory);
 int remove_dir(char *dirname, char *current_directory);
-int is_file(char *filename);
+int is_file(char *filename, char *current_directory);
 int rename_file(char *tgt_filename, char *src_filename);
 int join_path(char *source, char *target);
 

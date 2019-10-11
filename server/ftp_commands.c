@@ -184,7 +184,7 @@ int RNFR_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
-    if(is_file(buffer + 4))
+    if(is_file(buffer + 4, c->current_directory))
     {
         c->transmit_status = START_RENAME;
         strcpy(c->current_renaming_filename, buffer + 4);

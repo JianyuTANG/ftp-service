@@ -37,15 +37,44 @@ int make_dir(char *dirname, char *current_directory)
 
 int rm_dir(char *dirname)
 {
-    // dir doesn't exist
-	if ( 0 != access(dir, F_OK) ) {
-		return 0;
-	}
-	// error
-	if ( 0 > stat(dir, &dir_stat) ) {
-		perror("get directory stat error");
-		return 0;
-	}
+    DIR *dp;
+	struct dirent *entry;
+	struct stat dstat;
+    char *up = "..";
+    char *current = ".";
+
+    dp = opendir(dirname);
+    if(dp == NULL)
+    {
+        // cannot open the dir
+        return 0;
+    }
+
+    chdir(dirname);
+    while((entry = readdir(dp)) != NULL)
+    {
+        stat(entry->d_name, &dstat);
+        if(S_ISDIR(dstat.st_mode))
+        {
+            if(!strcmp(entry->d_name, up) || !strcmp(entry->d_name, current))
+            {
+                continue;
+            }
+            rm_dir(entry->d_name);
+        }
+        else if(S_ISREG(dstat.st_mode))
+        {
+            remove(entry->d_name);
+        }
+        else
+        {
+            return 0;
+        }
+        
+    }
+    close(dp);
+    rmdir(dirname);
+    return 1;
 }
 
 int remove_dir(char *dirname, char *current_directory)
@@ -59,9 +88,28 @@ int remove_dir(char *dirname, char *current_directory)
     return rm_dir(current_dir);
 }
 
-int is_file(char *filename)
+int is_file(char *filename, char *current_directory)
 {
-
+    char current_dir[DIRECTORY_SIZE];
+    strcpy(current_dir, current_directory);
+    if(join_path(current_dir, filename) == 0)
+    {
+        return 0;
+    }
+    if(access(current_dir, F_OK))
+    {
+        return 0;
+    }
+    struct stat dstat;
+    if(stat(current_dir, dstat) < 0)
+    {
+        return 0;
+    }
+    if(S_ISREG(dstat.st_mode))
+    {
+        return 1;
+    }
+    return 0;
 }
 
 int rename_file(char *tgt_filename, char *src_filename)
