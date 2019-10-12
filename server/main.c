@@ -1,9 +1,14 @@
 #include "server.h"
 
 
+char default_path[DIRECTORY_SIZE] = "/tmp";
+int server_port = 21;
+char my_ip[50];
+
 int main(int argc, char **argv)
 {
-    int server_port;
+    get_my_ip();
+    
     // process arugments
     if(argc != 1 && argc != 5 && argc != 3)
     {

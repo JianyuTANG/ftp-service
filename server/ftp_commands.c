@@ -359,8 +359,8 @@ int PASV_func(int fd, char* buffer)
     // bind port
     bzero(&server_addr, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-    int port = get_available_port();
-	server_addr.sin_port = htons(port);
+    //int port = get_available_port();
+	server_addr.sin_port = htons(0);  // OS will allocate a port automatically
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if(bind(serverSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
@@ -372,6 +372,7 @@ int PASV_func(int fd, char* buffer)
 	}
 
     //update status
+    int port = (int)(ntohs(server_addr.sin_port));
     c->transmit_status = READY_PASV;
     c->transmit_port = port;
     c->PASV_listen_fd = server_sockfd;
