@@ -209,7 +209,7 @@ int RNTO_func(int fd, char* buffer)
         return emit_message(fd, "530 Hasn't started renaming yet.\r\n");
     }
     c->transmit_status = NONE;
-    if(rename_file(buffer + 4, c->current_renaming_filename))
+    if(rename_file(buffer + 4, c->current_renaming_filename, c->current_directory))
     {
         return emit_message(fd, "250 Renamed successfully.\r\n");
     }

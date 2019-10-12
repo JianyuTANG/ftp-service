@@ -32,7 +32,11 @@ int make_dir(char *dirname, char *current_directory)
     {
         return 0;
     }
-    return mkdir(current_dir);
+    if (mkdir(current_dir))
+    {
+        return 0;
+    }
+    return 1;
 }
 
 int rm_dir(char *dirname)
@@ -112,9 +116,18 @@ int is_file(char *filename, char *current_directory)
     return 0;
 }
 
-int rename_file(char *tgt_filename, char *src_filename)
+int rename_file(char *tgt_filename, char *src_filename, char *current_directory)
 {
-    
+    char src[DIRECTORY_SIZE], tgt[DIRECTORY_SIZE];
+    strcpy(scr, current_directory);
+    join_path(src, src_filename);
+    strcpy(tgt, current_directory);
+    join_path(tgt, tgt_filename);
+    if(!rename(src, tgt))
+    {
+        return 1;
+    }
+    return 0;
 }
 
 int join_path(char *source, char *target)
