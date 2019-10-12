@@ -374,7 +374,7 @@ int PASV_func(int fd, char* buffer)
     //update status
     c->transmit_status = READY_PASV;
     c->transmit_port = port;
-    c->transmit_fd = server_sockfd;
+    c->PASV_listen_fd = server_sockfd;
 
     char ret_msg[DIRECTORY_SIZE];
     char h[4][10];
@@ -403,21 +403,43 @@ int RETR_func(int fd, char* buffer)
         // Need parameters
         return emit_message(fd, "500 Unknown command!\r\n");
     }
-    if(!is_file(buffer + 5))
+
+    // check the file for transmitting
+    char tgt_file[DIRECTORY_SIZE];
+    strcpy(tgt_file, c->current_directory);
+    if(join_path(tgt_file, buffer + 5) == 0)
     {
         return emit_message(fd, "550 File does not exist!\r\n");
     }
 
+
     // ensure connection established
-    if(c->transmit_status == READY_PASV)
+    if(!emit_message(fd, "150 Opening binary data connection."))
     {
-        ;
+        return 0;
     }
-    else if(c->transmit_status == READY_PORT)
+    transmitStatus transmit_status = c->transmit_status;
+    c->transmit_status = TRANSMITTING;
+    int isPASV = 0;
+    if(transmit_status == READY_PASV)
+    {
+        isPASV = 1;
+        c->transmit_fd = accept(c->PASV_listen_fd, NULL, NULL);
+        if(c->transmit_fd < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            close(c->PASV_listen_fd);
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+    }
+    else if(transmit_status == READY_PORT)
     {
         c->transmit_fd = socket(AF_INET, SOCK_STREAM, 0);
         if(c->transmit_fd < 0)
         {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
             return emit_message(fd, "425 Data connection not available!\r\n");
         }
         struct sockaddr_in client_addr;
@@ -426,6 +448,8 @@ int RETR_func(int fd, char* buffer)
         client_addr.sin_addr.s_addr = inet_addr(c->client_ip);
         if(connect(clientSocket, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
         {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
             return emit_message(fd, "425 Data connection not available!\r\n");
         }
     }
@@ -436,9 +460,141 @@ int RETR_func(int fd, char* buffer)
 
     // start transmitting data
 
+    // read and send the file
+    int filefd = open(tgt_file, O_RDONLY);
+    if(filefd < 0)
+    {
+        c->transmit_status = NONE;
+        close(c->transmit_fd);
+        return emit_message(fd, "451 Fail to read the file!\r\n");
+    }
+    char file_buf[BUFFER_SIZE];
+    bzero(file_buf, BUFFER_SIZE);
+    int block_len = 0;
+    while((block_len = read(filefd, buffer, BUFFER_SIZE)) > 0)
+    {
+        if(send(c->transmit_fd, file_buf, block_len, 0) < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            return emit_message(fd, "426 Connection broken!\r\n");
+        }
+        bzero(file_buf, BUFFER_SIZE);
+    }
+    close(filefd);
+
+    // transmitting success
+    c->transmit_status = NONE;
+    close(c->transmit_fd);
+    if(isPASV)
+    {
+        close(c->PASV_listen_fd);
+    }
+    return emit_message(fd, "226 Transfer complete.\r\n");
 }
 
 int STOR_func(int fd, char* buffer)
 {
+    Connection* c = get_connection(fd);
+    if(c->login_status < LOGGED_IN)
+    {
+        return emit_message(fd, "530 Hasn't logged in yet.\r\n");
+    }
 
+    // check parameter
+    if(buffer[4] != ' ')
+    {
+        // Need parameters
+        return emit_message(fd, "500 Unknown command!\r\n");
+    }
+
+    // check the file
+    char tgt_file[DIRECTORY_SIZE];
+    strcpy(tgt_file, c->current_directory);
+    if(join_path(tgt_file, buffer + 5) == 0)
+    {
+        return emit_message(fd, "550 Can not create the file!\r\n");
+    }
+    int filefd = open(tgt_file, O_WRONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
+    if(filefd < 0)
+    {
+        return emit_message(fd, "452 Can not create the file!\r\n");
+    }
+
+    // ensure connection established
+    if(!emit_message(fd, "150 Opening binary data connection."))
+    {
+        return 0;
+    }
+    transmitStatus transmit_status = c->transmit_status;
+    c->transmit_status = TRANSMITTING;
+    int isPASV = 0;
+    if(transmit_status == READY_PASV)
+    {
+        isPASV = 1;
+        c->transmit_fd = accept(c->PASV_listen_fd, NULL, NULL);
+        if(c->transmit_fd < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            close(c->PASV_listen_fd);
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+    }
+    else if(transmit_status == READY_PORT)
+    {
+        c->transmit_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if(c->transmit_fd < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+        struct sockaddr_in client_addr;
+        client_addr.sin_family = AF_INET;
+        client_addr.sin_port = htons(c->client_port);
+        client_addr.sin_addr.s_addr = inet_addr(c->client_ip);
+        if(connect(clientSocket, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+    }
+    else
+    {
+        return emit_message(fd, "425 Data connection not available!\r\n");
+    }
+
+    // start transmitting data
+
+    // read the file from TCP buffer
+    char file_buf[BUFFER_SIZE];
+    bzero(file_buf, BUFFER_SIZE);
+    int block_len = 0;
+    while(1)
+    {
+        if((block_len = read(c->transmit_fd, buffer, BUFFER_SIZE)) < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            return emit_message(fd, "426 Connection broken!\r\n");
+        }
+        else if(block_len == 0)
+        {
+            break;
+        }
+        write(filefd, buffer, block_len);
+        bzero(file_buf, BUFFER_SIZE);
+    }
+    close(filefd);
+
+    // transmitting success
+    c->transmit_status = NONE;
+    close(c->transmit_fd);
+    if(isPASV)
+    {
+        close(c->PASV_listen_fd);
+    }
+    return emit_message(fd, "226 Transfer complete.\r\n");
 }

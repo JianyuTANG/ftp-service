@@ -44,6 +44,7 @@ typedef struct Connection
     loginStatus login_status;
     transmitStatus transmit_status;
     int transmit_fd;
+    int PASV_listen_fd;
     int transmit_port;
     char client_ip[100];
     int client_port;
