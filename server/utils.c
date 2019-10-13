@@ -42,7 +42,7 @@ int emit_message(int fd, char *msg)
 int get_available_port()
 {
     struct sockaddr_in servaddr;
-    int sockfd, i, serverport, ret;
+    int sockfd, i, ret;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
  
     bzero(&servaddr, sizeof(servaddr));
@@ -52,11 +52,11 @@ int get_available_port()
     {
         servaddr.sin_port = htons(i);
         ret = connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
-        if(EISCONN == ret)
+        if(0 == ret)
         {
-            close(sockfd)
+            close(sockfd);
         }
-      else
+        else
         {
             return i;
         } 

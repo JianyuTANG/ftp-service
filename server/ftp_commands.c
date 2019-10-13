@@ -20,7 +20,7 @@ char *commands[] = {
     "REST",
 };
 
-ftp_func[NUM_COMMANDS] = {
+int (*ftp_func[NUM_COMMANDS])(int, char*) = {
     USER_func,
     PASS_func,
     RETR_func,
@@ -72,6 +72,11 @@ int PASS_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Already logged in!\r\n");
     }
+    else
+    {
+        return emit_message(fd, "530 Unknown error!\r\n");
+    }
+    
 }
 
 int SYST_func(int fd, char* buffer)
@@ -110,8 +115,8 @@ int PWD_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
-    char ret_msg[DIRECTORY_SIZE];
-    sprintf(ret_msg, "257 \"", c->current_directory, "\"\r\n");
+    char ret_msg[350];
+    sprintf(ret_msg, "257 \"%s%s", c->current_directory, "\"\r\n");
     return emit_message(fd, ret_msg);
     /*
     char current_directory[DIRECTORY_SIZE];
@@ -137,7 +142,7 @@ int CWD_func(int fd, char* buffer)
         return emit_message(fd, "250 Okay.\r\n");
     }
     char ret_msg[DIRECTORY_SIZE];
-    sprintf(ret_msg, "550 ", buffer + 4, " No such file or directory.\r\n");
+    sprintf(ret_msg, "550 %s%s", buffer + 4, " No such file or directory.\r\n");
     return emit_message(fd, ret_msg);
 }
 
@@ -151,11 +156,11 @@ int MKD_func(int fd, char* buffer)
     if(make_dir(buffer + 4, c->current_directory))
     {
         char ret_msg[DIRECTORY_SIZE];
-        sprintf(ret_msg, "257 \"", buffer + 4, "\" created.\r\n");
+        sprintf(ret_msg, "257 \"%s%s", buffer + 4, "\" created.\r\n");
         return emit_message(fd, ret_msg);
     }
     char ret_msg[DIRECTORY_SIZE];
-    sprintf(ret_msg, "550 ", buffer + 4, " Fail to create the directory.\r\n");
+    sprintf(ret_msg, "550 %s%s", buffer + 4, " Fail to create the directory.\r\n");
     return emit_message(fd, ret_msg);
 }
 
@@ -169,11 +174,11 @@ int RMD_func(int fd, char* buffer)
     if(remove_dir(buffer + 4, c->current_directory))
     {
         char ret_msg[DIRECTORY_SIZE];
-        sprintf(ret_msg, "250 \"", buffer + 4, "\" removed.\r\n");
+        sprintf(ret_msg, "250 \"%s%s", buffer + 4, "\" removed.\r\n");
         return emit_message(fd, ret_msg);
     }
     char ret_msg[DIRECTORY_SIZE];
-    sprintf(ret_msg, "550 ", buffer + 4, " Fail to remove the directory.\r\n");
+    sprintf(ret_msg, "550 %s%s", buffer + 4, " Fail to remove the directory.\r\n");
     return emit_message(fd, ret_msg);
 }
 
@@ -188,12 +193,12 @@ int RNFR_func(int fd, char* buffer)
     {
         c->transmit_status = START_RENAME;
         strcpy(c->current_renaming_filename, buffer + 4);
-        char ret_msg[DIRECTORY_SIZE];
-        sprintf(ret_msg, "350 \"", buffer + 4, "\" exists.\r\n");
+        char ret_msg[350];
+        sprintf(ret_msg, "350 \"%s%s", buffer + 4, "\" exists.\r\n");
         return emit_message(fd, ret_msg);
     }
     char ret_msg[DIRECTORY_SIZE];
-    sprintf(ret_msg, "550 \"", buffer + 4, "\" doesn't exist.\r\n");
+    sprintf(ret_msg, "550 \"%s%s", buffer + 4, "\" doesn't exist.\r\n");
     return emit_message(fd, ret_msg);
 }
 
@@ -240,7 +245,7 @@ int LIST_func(int fd, char* buffer)
         client_addr.sin_family = AF_INET;
         client_addr.sin_port = htons(c->client_port);
         client_addr.sin_addr.s_addr = inet_addr(c->client_ip);
-        if(connect(clientSocket, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+        if(connect(c->transmit_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
         {
             return emit_message(fd, "425 Data connection not available!\r\n");
         }
@@ -249,6 +254,7 @@ int LIST_func(int fd, char* buffer)
     {
         return emit_message(fd, "425 Data connection not available!\r\n");
     }
+    return 0;
 }
 
 int PORT_func(int fd, char* buffer)
@@ -362,7 +368,7 @@ int PASV_func(int fd, char* buffer)
     //int port = get_available_port();
 	server_addr.sin_port = htons(0);  // OS will allocate a port automatically
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    if(bind(serverSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    if(bind(server_sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         return emit_message(fd, "550 Fail to build socket!");
     }
@@ -381,12 +387,15 @@ int PASV_func(int fd, char* buffer)
     char h[4][10];
     for(int i=0; i < 4; i++)
     {
-        itoa(h[i], my_ip[i], 10);
+        sprintf(h[i], "%d", my_ip[i]);
+        // itoa(h[i], my_ip[i], 10);
     }
     char p[2][10];
-    itoa(p[0], port / 256, 10);
-    itoa(p[1], port % 256, 10);
-    sprintf(ret_msg, "227 =", h[0], ",", h[1], ",", h[2], ",", h[3], ",", p[0], ",", p[1]);
+    sprintf(p[0], "%d", port / 256);
+    sprintf(p[0], "%d", port % 256);
+    //itoa(p[0], port / 256, 10);
+    //itoa(p[1], port % 256, 10);
+    sprintf(ret_msg, "227 =%s%s%s%s%s%s%s%s%s%s%s", h[0], ",", h[1], ",", h[2], ",", h[3], ",", p[0], ",", p[1]);
     return emit_message(fd, ret_msg);
 }
 
@@ -447,7 +456,7 @@ int RETR_func(int fd, char* buffer)
         client_addr.sin_family = AF_INET;
         client_addr.sin_port = htons(c->client_port);
         client_addr.sin_addr.s_addr = inet_addr(c->client_ip);
-        if(connect(clientSocket, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+        if(connect(c->transmit_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
         {
             c->transmit_status = NONE;
             close(c->transmit_fd);
@@ -555,7 +564,7 @@ int STOR_func(int fd, char* buffer)
         client_addr.sin_family = AF_INET;
         client_addr.sin_port = htons(c->client_port);
         client_addr.sin_addr.s_addr = inet_addr(c->client_ip);
-        if(connect(clientSocket, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+        if(connect(c->transmit_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
         {
             c->transmit_status = NONE;
             close(c->transmit_fd);
@@ -598,4 +607,9 @@ int STOR_func(int fd, char* buffer)
         close(c->PASV_listen_fd);
     }
     return emit_message(fd, "226 Transfer complete.\r\n");
+}
+
+int REST_func(int fd, char* buffer)
+{
+    return 0;
 }

@@ -32,7 +32,7 @@ int make_dir(char *dirname, char *current_directory)
     {
         return 0;
     }
-    if (mkdir(current_dir))
+    if(mkdir(current_dir, 0777))
     {
         return 0;
     }
@@ -76,7 +76,8 @@ int rm_dir(char *dirname)
         }
         
     }
-    close(dp);
+    closedir(dp);
+    chdir(up);
     rmdir(dirname);
     return 1;
 }
@@ -105,7 +106,7 @@ int is_file(char *filename, char *current_directory)
         return 0;
     }
     struct stat dstat;
-    if(stat(current_dir, dstat) < 0)
+    if(stat(current_dir, &dstat) < 0)
     {
         return 0;
     }
@@ -119,7 +120,7 @@ int is_file(char *filename, char *current_directory)
 int rename_file(char *tgt_filename, char *src_filename, char *current_directory)
 {
     char src[DIRECTORY_SIZE], tgt[DIRECTORY_SIZE];
-    strcpy(scr, current_directory);
+    strcpy(src, current_directory);
     join_path(src, src_filename);
     strcpy(tgt, current_directory);
     join_path(tgt, tgt_filename);

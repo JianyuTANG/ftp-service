@@ -9,10 +9,13 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
+#include <ctype.h>
 #include <dirent.h>
 #include <sys/select.h>
-#include <strings.h>
+#include <fcntl.h>
+#include <sys/ioctl.h> 
+#include <unistd.h>
+#include <string.h>
 
 #define DIRECTORY_SIZE 200
 #define BUFFER_SIZE 2048
@@ -54,9 +57,10 @@ extern int server_port;
 extern char default_path[DIRECTORY_SIZE];
 extern char my_ip[50];
 
-extern char *commands[];
-extern int (*ftp_func[NUM_COMMANDS])(int fd, char* buffer);
+int process(int fd);
 
+extern char *commands[];
+extern int (*ftp_func[NUM_COMMANDS])(int, char*);
 
 int USER_func(int fd, char* buffer);
 int PASS_func(int fd, char* buffer);

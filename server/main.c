@@ -8,12 +8,12 @@ char my_ip[50];
 int main(int argc, char **argv)
 {
     get_my_ip();
-    
+
     // process arugments
     if(argc != 1 && argc != 5 && argc != 3)
     {
         // only 1 3 5 arguments are accepted
-        printf("ERROR: Wrong number of arguments!\n")
+        printf("ERROR: Wrong number of arguments!\n");
         return 0;
     }
 
@@ -82,9 +82,9 @@ int main(int argc, char **argv)
     // bind port
     bzero(&server_addr, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(CONTROL_PORT);
+	server_addr.sin_port = htons(server_port);
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    if(bind(serverSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    if(bind(server_sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         printf("ERROR: Fail to bind the port 21.\n");
         return 0;
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     // listen
     if (listen(server_sockfd, 10) < 0)
 	{
-		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
+		//printf("Error listen(): %s(%d)\n", strerror(errno), errno);
 		return 0;
 	}
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     {
         int fd, nread;
         testfds = readfds;
-        result = select(FD_SETSIZE, &testfds, (fd_set *)0, (fd_set *)0, (struct timeval *) 0); 
+        int result = select(FD_SETSIZE, &testfds, (fd_set *)0, (fd_set *)0, (struct timeval *) 0); 
 		if(result < 1) 
 		{ 
 			perror("server5"); 
@@ -122,7 +122,8 @@ int main(int argc, char **argv)
 
             if(fd == server_sockfd)
             {
-                client_sockfd = accept(server_sockfd, (struct sockaddr *) &client_addr, &sizeof(client_addr));
+                unsigned int client_len = sizeof(client_addr); 
+                client_sockfd = accept(server_sockfd, (struct sockaddr *) &client_addr, &client_len);
                 FD_SET(client_sockfd, &readfds);
                 Connection* c = (Connection*)malloc(sizeof(Connection));
                 c->fd = client_sockfd;

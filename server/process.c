@@ -38,7 +38,7 @@ int process(int fd)
             command[n] = '\0';
 
             // find correspondent function to call
-            for{int i = 0; i < NUM_COMMANDS; i++}
+            for(int i = 0; i < NUM_COMMANDS; i++)
             {
                 if(!strcmp(command, commands[i]))
                 {
