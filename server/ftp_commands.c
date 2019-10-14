@@ -47,7 +47,8 @@ int USER_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Already logged in!\r\n");
     }
-    if(strcmp(buffer+5, "annonymous"))
+    printf("%s\n", buffer);
+    if(strcmp(buffer+5, "anonymous"))
     {
         return emit_message(fd, "500 Wrong username!\r\n");
     }
@@ -81,7 +82,7 @@ int PASS_func(int fd, char* buffer)
 
 int SYST_func(int fd, char* buffer)
 {
-    return emit_message(fd, "215 UNIX Type:L8\r\n");
+    return emit_message(fd, "215 UNIX Type: L8\r\n");
 }
 
 int TYPE_func(int fd, char* buffer)
@@ -290,7 +291,7 @@ int PORT_func(int fd, char* buffer)
         if(*(buffer + cursor + p) == ',')
         {
             *(buffer + cursor + p) = '\0';
-            sprintf(c->client_ip, c->client_ip, buffer + cursor);
+            sprintf(c->client_ip, "%s%s", c->client_ip, buffer + cursor);
             cursor += p + 1;
         }
         else
@@ -300,7 +301,7 @@ int PORT_func(int fd, char* buffer)
         }
         if(i < 3)
         {
-            sprintf(c->client_ip, c->client_ip, ".");
+            sprintf(c->client_ip, "%s%s", c->client_ip, ".");
         }
     }
     // get port
@@ -331,6 +332,7 @@ int PORT_func(int fd, char* buffer)
     }
     c->client_port = port;
     c->transmit_status = READY_PORT;
+    printf("%s %d\n", c->client_ip, c->client_port);
     return emit_message(fd, "200 Port accepted!\r\n");
 }
 
@@ -360,7 +362,7 @@ int PASV_func(int fd, char* buffer)
     server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(server_sockfd < 0)
     {
-        return emit_message(fd, "550 Fail to build socket!");
+        return emit_message(fd, "550 Fail to build socket!\r\n");
     }
     // bind port
     bzero(&server_addr, sizeof(server_addr));
@@ -370,32 +372,56 @@ int PASV_func(int fd, char* buffer)
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if(bind(server_sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        return emit_message(fd, "550 Fail to build socket!");
+        return emit_message(fd, "550 Fail to build socket!\r\n");
     }
-    if (listen(server_sockfd, 10) < 0)
+    if (listen(server_sockfd, 1) < 0)
 	{
-		return emit_message(fd, "550 Fail to build socket!");
+		return emit_message(fd, "550 Fail to build socket!\r\n");
 	}
 
     //update status
+    socklen_t addr_len = sizeof(server_addr);
+	getsockname(server_sockfd, (struct sockaddr *)&(server_addr), &addr_len);
     int port = (int)(ntohs(server_addr.sin_port));
+    printf("port: %d\n", port);
     c->transmit_status = READY_PASV;
     c->transmit_port = port;
     c->PASV_listen_fd = server_sockfd;
 
     char ret_msg[DIRECTORY_SIZE];
     char h[4][10];
+    int i = 0, cursor = 0, section = 0;
+    while(my_ip[i] != '\0')
+    {
+        if(my_ip[i] != '.')
+        {
+            h[section][cursor] = my_ip[i];
+            cursor++;
+        }
+        else
+        {
+            h[section][cursor] = '\0';
+            cursor = 0;
+            section++;
+        }
+        i++;
+    }
+    h[section][cursor] = '\0';
+    /*
     for(int i=0; i < 4; i++)
     {
         sprintf(h[i], "%d", my_ip[i]);
         // itoa(h[i], my_ip[i], 10);
     }
+    */
+
     char p[2][10];
     sprintf(p[0], "%d", port / 256);
-    sprintf(p[0], "%d", port % 256);
+    sprintf(p[1], "%d", port % 256);
     //itoa(p[0], port / 256, 10);
     //itoa(p[1], port % 256, 10);
-    sprintf(ret_msg, "227 =%s%s%s%s%s%s%s%s%s%s%s", h[0], ",", h[1], ",", h[2], ",", h[3], ",", p[0], ",", p[1]);
+    sprintf(ret_msg, "227 =%s,%s,%s,%s,%s,%s\r\n", h[0], h[1], h[2], h[3], p[0], p[1]);
+    printf("%s", ret_msg);
     return emit_message(fd, ret_msg);
 }
 
@@ -424,10 +450,11 @@ int RETR_func(int fd, char* buffer)
 
 
     // ensure connection established
-    if(!emit_message(fd, "150 Opening binary data connection."))
+    if(!emit_message(fd, "150 Opening binary data connection.\r\n"))
     {
         return 0;
     }
+    printf("%s\n", c->client_ip);
     transmitStatus transmit_status = c->transmit_status;
     c->transmit_status = TRANSMITTING;
     int isPASV = 0;
@@ -445,6 +472,7 @@ int RETR_func(int fd, char* buffer)
     }
     else if(transmit_status == READY_PORT)
     {
+        printf("start port connecting\n");
         c->transmit_fd = socket(AF_INET, SOCK_STREAM, 0);
         if(c->transmit_fd < 0)
         {
@@ -469,11 +497,15 @@ int RETR_func(int fd, char* buffer)
     }
 
     // start transmitting data
+    printf("%s %d\n", c->client_ip, c->client_port);
+    printf("%s\n", c->current_directory);
+    printf("%s\n", tgt_file);
 
     // read and send the file
     int filefd = open(tgt_file, O_RDONLY);
     if(filefd < 0)
     {
+        printf("reading file failure\n");
         c->transmit_status = NONE;
         close(c->transmit_fd);
         return emit_message(fd, "451 Fail to read the file!\r\n");
@@ -481,9 +513,13 @@ int RETR_func(int fd, char* buffer)
     char file_buf[BUFFER_SIZE];
     bzero(file_buf, BUFFER_SIZE);
     int block_len = 0;
-    while((block_len = read(filefd, buffer, BUFFER_SIZE)) > 0)
+    printf("start reading file\n");
+    int counter = 0;
+    while((block_len = read(filefd, file_buf, BUFFER_SIZE)) > 0)
     {
-        if(send(c->transmit_fd, file_buf, block_len, 0) < 0)
+        // printf("block\n");
+        counter += block_len;
+        if(write(c->transmit_fd, file_buf, block_len) < 0)
         {
             c->transmit_status = NONE;
             close(c->transmit_fd);
@@ -493,14 +529,19 @@ int RETR_func(int fd, char* buffer)
     }
     close(filefd);
 
+    printf("transfered %d bytes\n", counter);
+    
+
     // transmitting success
+    emit_message(fd, "226 Transfer complete.\r\n");
     c->transmit_status = NONE;
     close(c->transmit_fd);
     if(isPASV)
     {
         close(c->PASV_listen_fd);
     }
-    return emit_message(fd, "226 Transfer complete.\r\n");
+    printf("finsih transmitting\n");
+    return 1;
 }
 
 int STOR_func(int fd, char* buffer)
@@ -531,8 +572,9 @@ int STOR_func(int fd, char* buffer)
         return emit_message(fd, "452 Can not create the file!\r\n");
     }
 
+
     // ensure connection established
-    if(!emit_message(fd, "150 Opening binary data connection."))
+    if(!emit_message(fd, "150 Opening binary data connection.\r\n"))
     {
         return 0;
     }
@@ -584,7 +626,7 @@ int STOR_func(int fd, char* buffer)
     int block_len = 0;
     while(1)
     {
-        if((block_len = read(c->transmit_fd, buffer, BUFFER_SIZE)) < 0)
+        if((block_len = read(c->transmit_fd, file_buf, BUFFER_SIZE)) < 0)
         {
             c->transmit_status = NONE;
             close(c->transmit_fd);
@@ -594,7 +636,7 @@ int STOR_func(int fd, char* buffer)
         {
             break;
         }
-        write(filefd, buffer, block_len);
+        write(filefd, file_buf, block_len);
         bzero(file_buf, BUFFER_SIZE);
     }
     close(filefd);

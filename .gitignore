@@ -1,6 +1,11 @@
 # Prerequisites
 *.d
 
+*.py
+*/*
+server\server
+*.data
+
 # Object files
 *.o
 *.ko

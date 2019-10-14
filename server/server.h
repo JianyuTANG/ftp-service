@@ -58,6 +58,7 @@ extern char default_path[DIRECTORY_SIZE];
 extern char my_ip[50];
 
 int process(int fd);
+int connection_process(int server_sockfd, fd_set *readfds);
 
 extern char *commands[];
 extern int (*ftp_func[NUM_COMMANDS])(int, char*);

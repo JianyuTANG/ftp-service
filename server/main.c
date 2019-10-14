@@ -7,7 +7,9 @@ char my_ip[50];
 
 int main(int argc, char **argv)
 {
-    get_my_ip();
+    //get_my_ip();
+    strcpy(my_ip, "127.0.0.1");
+    printf("hello\n");
 
     // process arugments
     if(argc != 1 && argc != 5 && argc != 3)
@@ -25,7 +27,8 @@ int main(int argc, char **argv)
         }
         else if(!strcmp(argv[1], "-root"))
         {
-            strcpy(default_path, argv[2]);
+            getcwd(default_path, 200);
+            join_path(default_path, argv[2]);
         }
         else
         {
@@ -41,7 +44,8 @@ int main(int argc, char **argv)
             if(!strcmp(argv[3], "-root"))
             {
                 server_port = atoi(argv[2]);
-                strcpy(default_path, argv[4]);
+                getcwd(default_path, 200);
+                join_path(default_path, argv[4]);
             }
             else
             {
@@ -54,7 +58,8 @@ int main(int argc, char **argv)
             if(!strcmp(argv[3], "-port"))
             {
                 server_port = atoi(argv[4]);
-                strcpy(default_path, argv[2]);
+                getcwd(default_path, 200);
+                join_path(default_path, argv[2]);
             }
             else
             {
@@ -68,6 +73,8 @@ int main(int argc, char **argv)
         server_port = 21;
         strcpy(default_path, "/tmp");
     }
+
+    printf("default path: %s\n", default_path);
     
     // build socket
     int server_sockfd;
@@ -100,8 +107,8 @@ int main(int argc, char **argv)
     fd_set readfds, testfds;
     FD_ZERO(&readfds); 
 	FD_SET(server_sockfd, &readfds);
-    int client_sockfd;
-    struct sockaddr_in client_addr;
+    //int client_sockfd;
+    //struct sockaddr_in client_addr;
     while(1)
     {
         int fd, nread;
@@ -122,14 +129,18 @@ int main(int argc, char **argv)
 
             if(fd == server_sockfd)
             {
+                printf("new connection\n");
+                /*
                 unsigned int client_len = sizeof(client_addr); 
                 client_sockfd = accept(server_sockfd, (struct sockaddr *) &client_addr, &client_len);
                 FD_SET(client_sockfd, &readfds);
                 Connection* c = (Connection*)malloc(sizeof(Connection));
                 c->fd = client_sockfd;
                 strcpy(c->current_directory, default_path);
-                c->login_status = 0; // unlogged
+                c->login_status = OUT; // unlogged
                 register_connection(client_sockfd, c);
+                */
+               connection_process(server_sockfd, &readfds);
             }
             else
             {
@@ -139,14 +150,13 @@ int main(int argc, char **argv)
 				{
 					close(fd);
 					FD_CLR(fd, &readfds);
-					printf("removing client on fd %d/n", fd);
+					printf("removing client on fd %d\n", fd);
                     continue;
 				}
+                printf("new command\n");
                 process(fd);
             }
-            
         }
     }
-
     return 0;
 }

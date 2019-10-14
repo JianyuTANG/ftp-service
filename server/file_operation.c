@@ -216,11 +216,25 @@ int join_path(char *source, char *target)
         strcpy(source, "/");
         for(int i = 0; i < divide; i++)
         {
-            sprintf(source, source, current_dir + pos[i]);
+            if( i != depth - 1)
+            {
+                sprintf(source, "%s%s/", source, current_dir + pos[i]);
+            }
+            else
+            {
+                sprintf(source, "%s%s", source, current_dir + pos[i]);
+            }
         }
         for(int i = divide; i < depth; i++)
         {
-            sprintf(source, source, target_dir + pos[i]);
+            if( i != depth - 1)
+            {
+                sprintf(source, "%s%s/", source, target_dir + pos[i]);
+            }
+            else
+            {
+                sprintf(source, "%s%s", source, target_dir + pos[i]);
+            }
         }
     }
     return 1;
