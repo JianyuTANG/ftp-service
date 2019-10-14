@@ -43,6 +43,10 @@ int (*ftp_func[NUM_COMMANDS])(int, char*) = {
 int USER_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status >= LOGGED_IN)
     {
         return emit_message(fd, "530 Already logged in!\r\n");
@@ -59,6 +63,10 @@ int USER_func(int fd, char* buffer)
 int PASS_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     loginStatus s = c->login_status;
     if(s == OUT)
     {
@@ -82,12 +90,22 @@ int PASS_func(int fd, char* buffer)
 
 int SYST_func(int fd, char* buffer)
 {
+    Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     return emit_message(fd, "215 UNIX Type: L8\r\n");
 }
 
 int TYPE_func(int fd, char* buffer)
 {
-    if(get_connection(fd)->login_status < LOGGED_IN)
+    Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
+    if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
@@ -100,18 +118,32 @@ int TYPE_func(int fd, char* buffer)
 
 int QUIT_func(int fd, char* buffer)
 {
+    Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     emit_message(fd, "221 Goodbye.\r\n");
     return 0;
 }
 
 int ABOR_func(int fd, char* buffer)
 {
+    Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     return QUIT_func(fd, buffer);
 }
 
 int PWD_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -134,6 +166,10 @@ int PWD_func(int fd, char* buffer)
 int CWD_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -168,6 +204,10 @@ int MKD_func(int fd, char* buffer)
 int RMD_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -186,6 +226,10 @@ int RMD_func(int fd, char* buffer)
 int RNFR_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -206,6 +250,10 @@ int RNFR_func(int fd, char* buffer)
 int RNTO_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -225,6 +273,10 @@ int RNTO_func(int fd, char* buffer)
 int LIST_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -261,6 +313,10 @@ int LIST_func(int fd, char* buffer)
 int PORT_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -339,6 +395,10 @@ int PORT_func(int fd, char* buffer)
 int PASV_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -428,6 +488,10 @@ int PASV_func(int fd, char* buffer)
 int RETR_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
@@ -547,6 +611,10 @@ int RETR_func(int fd, char* buffer)
 int STOR_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
     if(c->login_status < LOGGED_IN)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
