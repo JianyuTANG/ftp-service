@@ -122,7 +122,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QTextBrowser" name="textBrowser"/>
+      <widget class="QTextBrowser" name="Prompt"/>
      </item>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -268,7 +268,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QTableWidget" name="tableWidget"/>
+      <widget class="QTableWidget" name="Tasks"/>
      </item>
     </layout>
    </widget>
