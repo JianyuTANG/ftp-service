@@ -53,13 +53,6 @@
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="Button_quit">
-         <property name="text">
-          <string>Quit</string>
-         </property>
-        </widget>
-       </item>
       </layout>
      </item>
      <item>
@@ -89,9 +82,9 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="Button_login">
+        <widget class="QPushButton" name="Button_quit">
          <property name="text">
-          <string>Login</string>
+          <string>Quit</string>
          </property>
         </widget>
        </item>
