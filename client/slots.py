@@ -91,9 +91,11 @@ def server_mkdir_button():
     d.exec_()
     dirname = input_content
     if client.make_dir(dirname) == 0:
+        update_prompt()
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to make dir!')
         return
     # TODO update server file list
+    update_server_filelist()
 
 
 def local_rmdir_button():
@@ -120,6 +122,8 @@ def server_rmdir_button():
         if client.remove_dir(d) == 0:
             QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to remove the dir!')
     # TODO update server file list
+    update_prompt()
+    update_server_filelist()
 
 
 def server_rename_button():
@@ -134,10 +138,55 @@ def server_rename_button():
     d.exec_()
     new_name = input_content
     if client.rename(dirlist[0], new_name) == 0:
+        update_prompt()
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to rename the file!')
         return
     # TODO update server file list
 
 
 def local_refresh_button():
+    update_local_filelist()
+
+
+def server_refresh_button():
+    if client.connection_status == 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    update_server_filelist()
+
+
+def retrieve_button():
+    if client.connection_status == 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    dirlist = ui.List_local.selectedItems()
+    if len(dirlist) != 1:
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose one file!')
+        return
+    filename = dirlist[0]
+    if client.retrieve_file(filename) == 0:
+        update_prompt()
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to retrieve the file!')
+        return
+    update_prompt()
+    update_local_filelist()
+
+
+def store_button():
+    if client.connection_status == 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    dirlist = ui.List_local.selectedItems()
+    if len(dirlist) != 1:
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose one file!')
+        return
+    local_filename = dirlist[0]
+    d = Dialog(MainWindow, '请输入保存至服务器的文件名')
+    d.exec_()
+    new_filename = input_content
+    if client.store_file(local_filename, new_filename) == 0:
+        update_prompt()
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to store the file!')
+        return
+    update_prompt()
     update_local_filelist()
