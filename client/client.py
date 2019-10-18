@@ -3,6 +3,7 @@ import socket
 import re
 
 pasv_re = re.compile(r'(\d*),(\d*),(\d*),(\d*),(\d*),(\d*)')
+pwd_re = re.compile('\"(.*)\"')
 
 
 class Client:
@@ -20,6 +21,7 @@ class Client:
         self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.local_directory = os.getcwd()
         self.server_directory = None
+        self.server_file_list = []
         self.prompt_lines = []
 
     def __get_reply(self):
@@ -159,7 +161,7 @@ class Client:
             sock = self.data_socket
             self.data_socket = sock.accept()
 
-        # receive and write data
+        # receive data
         content = ''
         while True:
             block = self.data_socket.recv(1024)
@@ -169,15 +171,16 @@ class Client:
         self.__close_socket(1)
         if self.mode == 'PORT':
             sock.close()
+        self.prompt_lines += self.__get_reply()
+        if self.prompt_lines[-1][:3] != '226':
+            return 0
+
+        # write data
         try:
             f = open(os.path.join(self.local_directory, filename), 'wb')
             f.write(content)
             f.close()
         except:
-            return 0
-
-        self.prompt_lines += self.__get_reply()
-        if self.prompt_lines[-1][:3] != '226':
             return 0
 
         return 1
@@ -267,7 +270,7 @@ class Client:
         return 1
 
 
-    def list(self):
+    def list_server(self):
         if self.mode == 'PASV':
             # set pasv mode
             if self.__set_PASV() == 0:
@@ -291,3 +294,39 @@ class Client:
             self.data_socket = sock.accept()
 
         # receive data
+        data = ''
+        while True:
+            block = self.data_socket.recv(1024)
+            data += block
+            if not block:
+                break
+        self.__close_socket(1)
+        if self.mode == 'PORT':
+            sock.close()
+        self.prompt_lines += self.__get_reply()
+        if self.prompt_lines[-1][:3] != '226':
+            return 0
+
+        # parse data
+        self.server_file_list.clear()
+        data = data.split('\r\n')[:-1]
+        for f in data:
+            self.server_file_list.append(f.split(' ')[-1])
+
+        return 1
+
+
+    def get_server_directory(self):
+        msg = 'PWD'
+        self.prompt_lines.append(msg)
+        self.__send_msg(msg + '\r\n')
+        self.prompt_lines += self.__get_reply()
+        ans = self.prompt_lines[-1]
+        if ans[:3] != '250':
+            return 0
+        self.server_directory = self.prompt_lines[-1].split(' ')[1][:-2]
+        d = pwd_re.search(ans)
+        if d is None:
+            return 0
+        self.server_directory = d.group(1)
+        return 1

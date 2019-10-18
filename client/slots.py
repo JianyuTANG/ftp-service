@@ -22,6 +22,17 @@ def update_local_filelist():
         ui.List_local.insertItem(i + 1, QtWidgets.QListWidgetItem(file))
 
 
+def update_server_filelist():
+    if client.list_server() == 0:
+        update_prompt()
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to LIST!')
+        return
+    update_prompt()
+    ui.List_server.clear()
+    for i, file in enumerate(client.server_file_list):
+        ui.List_server.insertItem(i + 1, QtWidgets.QListWidgetItem(file))
+
+
 def connect_button():
     if client.connection_status == 'logged in':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Already connected!')
@@ -41,6 +52,11 @@ def connect_button():
     # TODO update directories
     ui.Line_directory_local.setText(client.local_directory)
     update_local_filelist()
+    if client.get_server_directory() == 0:
+        update_prompt()
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to print the directory!')
+        return
+    ui.Line_directory_server.setText(client.server_directory)
     update_prompt()
 
 
@@ -121,3 +137,7 @@ def server_rename_button():
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to rename the file!')
         return
     # TODO update server file list
+
+
+def local_refresh_button():
+    update_local_filelist()
