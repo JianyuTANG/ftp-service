@@ -3,6 +3,7 @@ from main import ui, MainWindow
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 import os
+from dialog import input_content, Dialog
 
 
 client = Client()
@@ -60,15 +61,19 @@ def browse_button():
 
 
 def local_mkdir_button():
-    dirname = ''
     # TODO add input dialog
+    d = Dialog(MainWindow, '请输入新的文件（夹）名')
+    d.exec_()
+    dirname = input_content
     os.mkdir(os.join(client.local_directory, dirname))
     update_local_filelist()
 
 
 def server_mkdir_button():
-    dirname = ''
     # TODO add input dialog
+    d = Dialog(MainWindow, '请输入新的文件（夹）名')
+    d.exec_()
+    dirname = input_content
     if client.make_dir(dirname) == 0:
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to make dir!')
         return
@@ -98,4 +103,21 @@ def server_rmdir_button():
     for d in dirlist:
         if client.remove_dir(d) == 0:
             QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to remove the dir!')
+    # TODO update server file list
+
+
+def server_rename_button():
+    if client.connection_status == 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    dirlist = ui.List_server.selectedItems()
+    if len(dirlist) != 1:
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please only choose one dir or one file!')
+        return
+    d = Dialog(MainWindow, '请输入新的文件（夹）名')
+    d.exec_()
+    new_name = input_content
+    if client.rename(dirlist[0], new_name) == 0:
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to rename the file!')
+        return
     # TODO update server file list
