@@ -1,5 +1,4 @@
 from client import Client
-from main import ui, MainWindow
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 import os
@@ -7,6 +6,14 @@ from dialog import input_content, Dialog
 
 
 client = Client()
+
+ui = None
+MainWindow = None
+
+
+def setup(x, y):
+    ui = x
+    MainWindow = y
 
 
 def update_prompt():
@@ -67,6 +74,7 @@ def quit_button():
 
 
 def browse_button():
+    ui.Line_directory_local.setText('x')
     directory = QFileDialog.getExistingDirectory(MainWindow,
                                                 "选取文件夹",
                                                 "./")
@@ -189,4 +197,4 @@ def store_button():
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to store the file!')
         return
     update_prompt()
-    update_local_filelist()
+    update_server_filelist()

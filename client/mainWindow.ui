@@ -98,7 +98,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QRadioButton" name="radioButton">
+      <widget class="QRadioButton" name="radio_pasv">
        <property name="text">
         <string>PASV</string>
        </property>
@@ -108,7 +108,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QRadioButton" name="radioButton_2">
+      <widget class="QRadioButton" name="radio_port">
        <property name="text">
         <string>PORT</string>
        </property>

@@ -16,7 +16,7 @@ class Ui_Dialog(object):
         self.Input.setGeometry(QtCore.QRect(52, 100, 301, 41))
         self.Input.setObjectName("Input")
         self.label = QtWidgets.QLabel(Dialog)
-        self.label.setGeometry(QtCore.QRect(50, 50, 72, 15))
+        self.label.setGeometry(QtCore.QRect(50, 50, 301, 16))
         self.label.setObjectName("label")
         self.okbutton = QtWidgets.QPushButton(Dialog)
         self.okbutton.setGeometry(QtCore.QRect(160, 180, 93, 28))
