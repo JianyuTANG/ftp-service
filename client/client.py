@@ -28,7 +28,7 @@ class Client:
         data = ''
         ret = []
         while True:
-            block = self.control_socket.recv(1024)
+            block = self.control_socket.recv(1024).decode()
             data += block
             if data.endswith('\r\n'):
                 ret += data.split('\r\n')
@@ -45,7 +45,7 @@ class Client:
 
     def __set_PASV(self):
         msg = 'PASV\r\n'
-        self.__send_msg(msg)
+        self.__send_msg(msg.encode())
         self.prompt_lines += [msg]
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '227':
@@ -72,7 +72,7 @@ class Client:
         port = ',%d,%d' % (port//256, port % 256)
         msg = 'PORT ' + ip + port
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '227':
             return 0
@@ -91,23 +91,30 @@ class Client:
 
     def connect(self):
         # connect
-        self.control_socket.connect((self.server_ip, self.server_port))
+        try:
+            self.control_socket.connect((self.server_ip, self.server_port))
+        except:
+            return 0
         self.prompt_lines += self.__get_reply()
-        if self.prompt_lines[-1][:3] != '230':
+        if self.prompt_lines[-1][:3] != '220':
             return 0
 
         # login
+        print('good')
         msg = 'USER ' + self.username
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
+        print(self.prompt_lines[-1])
         if self.prompt_lines[-1][:3] != '331':
+            print('good')
             return 0
 
         # password
+        print('good')
         msg = 'PASS ' + self.password
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '230':
             return 0
@@ -115,7 +122,7 @@ class Client:
         # set binary mode
         msg = 'TYPE I'
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '200':
             return 0
@@ -123,13 +130,14 @@ class Client:
         # now login succeed
         self.connection_status = 'logged in'
         self.local_directory = os.getcwd()
+        print('good')
         return 1
 
 
     def quit(self):
-        msg = 'ABOR'
+        msg = 'QUIT'
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '221':
             pass
@@ -207,7 +215,7 @@ class Client:
         # send STOR
         msg = 'STOR ' + server_filename
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '150':
             return 0
@@ -219,9 +227,10 @@ class Client:
 
         # send data
         len = len(content)
-        for cursor in range(0, len, 1024):
-            block = content[cursor:min(len, cursor + 1024)]
-            self.data_socket.sendall(block)
+        self.data_socket.sendall(content)
+        #for cursor in range(0, len, 1024):
+        #    block = content[cursor:min(len, cursor + 1024)]
+        #    self.data_socket.sendall(block)
         self.__close_socket(1)
         if self.mode == 'PORT':
             sock.close()
@@ -237,7 +246,7 @@ class Client:
     def make_dir(self, dirname):
         msg = 'MKD ' + dirname
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '250' or self.prompt_lines[-1][:3] != '257':
             return 0
@@ -247,7 +256,7 @@ class Client:
     def remove_dir(self, dirname):
         msg = 'RMD ' + dirname
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '250':
             return 0
@@ -257,13 +266,13 @@ class Client:
     def rename(self, src_filename, tgt_filename):
         msg = 'RNFR ' + src_filename
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '350':
             return 0
         msg = 'RNTO ' + src_filename
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '250':
             return 0
@@ -283,7 +292,7 @@ class Client:
         # send LIST
         msg = 'LIST'
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '150':
             return 0
@@ -319,14 +328,25 @@ class Client:
     def get_server_directory(self):
         msg = 'PWD'
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         ans = self.prompt_lines[-1]
-        if ans[:3] != '250':
+        if ans[:3] != '257':
             return 0
         self.server_directory = self.prompt_lines[-1].split(' ')[1][:-2]
         d = pwd_re.search(ans)
         if d is None:
             return 0
         self.server_directory = d.group(1)
+        return 1
+
+
+    def change_dir(self, tgt_dir):
+        msg = 'CWD ' + tgt_dir
+        self.prompt_lines.append(msg)
+        self.__send_msg((msg + '\r\n').encode())
+        self.prompt_lines += self.__get_reply()
+        ans = self.prompt_lines[-1]
+        if ans[:3] != '250':
+            return 0
         return 1

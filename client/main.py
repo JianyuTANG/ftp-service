@@ -13,10 +13,15 @@ app = QApplication(sys.argv)
 MainWindow = QMainWindow()
 ui = mainWindow.Ui_MainWindow()
 ui.setupUi(MainWindow)
+ui.Input_port.setText('10011')
+ui.Input_ip.setText('127.0.0.1')
+ui.Input_username.setText('anonymous')
+ui.Input_password.setText('e73jzTRTNqCN9PYAAjjn')
 
 
 def update_prompt():
     data = '\n'.join(client.prompt_lines)
+    print(data)
     ui.Prompt.setText(data)
 
 
@@ -24,6 +29,7 @@ def update_local_filelist():
     directory = client.local_directory
     filelist = os.listdir(directory)
     ui.List_local.clear()
+    ui.Line_directory_local.setText(directory)
     for i, file in enumerate(filelist):
         ui.List_local.insertItem(i + 1, QtWidgets.QListWidgetItem(file))
 
@@ -55,6 +61,7 @@ def connect_button():
     client.password = password
     client.server_ip = ip
     client.server_port = port
+
     if client.connect() == 0:
         update_prompt()
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to connect the server!')
@@ -72,8 +79,10 @@ def connect_button():
 
 def quit_button():
     if client.connection_status == 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Haven\'t logged in!')
         return
     client.quit()
+    update_prompt()
 
 
 def browse_button():
@@ -87,6 +96,35 @@ def browse_button():
     update_local_filelist()
 
 
+def local_chdir_event():
+    print('666')
+    dirlist = ui.List_local.selectedItems()
+    print('555')
+    currentdir = dirlist[0].text()
+    print(currentdir)
+    client.local_directory = os.path.join(client.local_directory, currentdir)
+    update_local_filelist()
+
+
+def server_chdir_event():
+    if client.connection_status == 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    dirlist = ui.List_server.selectedItems()
+    currentdir = dirlist[0].text()
+    if client.change_dir(currentdir) == 0:
+        update_prompt()
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to change the dir!')
+        return
+    if client.get_server_directory() == 0:
+        update_prompt()
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to print the directory!')
+        return
+    ui.Line_directory_server.setText(client.server_directory)
+    update_server_filelist()
+    update_prompt()
+
+
 def local_mkdir_button():
     # TODO add input dialog
     dia = Dialog(parent=MainWindow, hintmsg='please enter the name of the dir')
@@ -97,6 +135,9 @@ def local_mkdir_button():
 
 
 def server_mkdir_button():
+    if client.connection_status == 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
     # TODO add input dialog
     d = Dialog(MainWindow, '请输入新的文件（夹）名')
     d.exec_()
@@ -126,6 +167,9 @@ def local_rmdir_button():
 
 
 def server_rmdir_button():
+    if client.connection_status == 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
     dirlist = ui.List_server.selectedItems()
     if len(dirlist) == 0:
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose a dir or a file!')
@@ -225,6 +269,8 @@ ui.Button_rmdir_server.clicked.connect(server_rmdir_button)
 ui.Button_refresh_server.clicked.connect(server_refresh_button)
 ui.Button_rename_server.clicked.connect(server_rename_button)
 ui.Button_retrieve_server.clicked.connect(retrieve_button)
+ui.List_server.doubleClicked.connect(server_chdir_event)
+ui.List_local.doubleClicked.connect(local_chdir_event)
 MainWindow.show()
 sys.exit(app.exec())
 
