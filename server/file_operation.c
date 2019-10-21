@@ -110,7 +110,7 @@ int is_file(char *filename, char *current_directory)
     {
         return 0;
     }
-    if(S_ISREG(dstat.st_mode))
+    if(S_ISREG(dstat.st_mode) || S_ISDIR(dstat.st_mode))
     {
         return 1;
     }

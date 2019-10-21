@@ -152,6 +152,7 @@ int main(int argc, char **argv)
 					close(fd);
 					FD_CLR(fd, &readfds);
 					printf("removing client on fd %d\n", fd);
+                    exit_process(fd);
                     continue;
 				}
                 printf("new command\n");

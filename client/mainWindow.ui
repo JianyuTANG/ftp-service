@@ -268,7 +268,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QTableWidget" name="Tasks"/>
+      <widget class="QTableWidget" name="Tasks">
+       <attribute name="horizontalHeaderVisible">
+        <bool>true</bool>
+       </attribute>
+      </widget>
      </item>
     </layout>
    </widget>

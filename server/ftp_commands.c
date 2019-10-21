@@ -119,6 +119,7 @@ int TYPE_func(int fd, char* buffer)
 int QUIT_func(int fd, char* buffer)
 {
     Connection* c = get_connection(fd);
+    c->login_status = OUT;
     if(c->transmit_status == TRANSMITTING)
     {
         return 1;
@@ -234,16 +235,16 @@ int RNFR_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
-    if(is_file(buffer + 4, c->current_directory))
+    if(is_file(buffer + 5, c->current_directory))
     {
         c->transmit_status = START_RENAME;
-        strcpy(c->current_renaming_filename, buffer + 4);
+        strcpy(c->current_renaming_filename, buffer + 5);
         char ret_msg[350];
-        sprintf(ret_msg, "350 \"%s%s", buffer + 4, "\" exists.\r\n");
+        sprintf(ret_msg, "350 \"%s%s", buffer + 5, "\" exists.\r\n");
         return emit_message(fd, ret_msg);
     }
     char ret_msg[DIRECTORY_SIZE];
-    sprintf(ret_msg, "550 \"%s%s", buffer + 4, "\" doesn't exist.\r\n");
+    sprintf(ret_msg, "550 \"%s%s", buffer + 5, "\" doesn't exist.\r\n");
     return emit_message(fd, ret_msg);
 }
 
@@ -263,7 +264,7 @@ int RNTO_func(int fd, char* buffer)
         return emit_message(fd, "530 Hasn't started renaming yet.\r\n");
     }
     c->transmit_status = NONE;
-    if(rename_file(buffer + 4, c->current_renaming_filename, c->current_directory))
+    if(rename_file(buffer + 5, c->current_renaming_filename, c->current_directory))
     {
         return emit_message(fd, "250 Renamed successfully.\r\n");
     }
@@ -335,7 +336,6 @@ int LIST_func(int fd, char* buffer)
 	sprintf(request, "ls %s -lh", c->current_directory);
 	FILE *ls_output = 0;
     ls_output = popen(request, "r");
-    printf("%d\n", ls_output);
     char block[1024];
     int block_len = 0;
     int counter = 0;
@@ -348,8 +348,6 @@ int LIST_func(int fd, char* buffer)
             close(c->transmit_fd);
             return emit_message(fd, "426 Connection broken!\r\n");
         }
-        printf("%d\n", counter);
-        printf("%s", block);
         bzero(block, 1024);
     }
     fclose(ls_output);

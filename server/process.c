@@ -95,3 +95,14 @@ int connection_process(int server_sockfd, fd_set *readfds)
     register_connection(client_sockfd, c);
     return emit_message(client_sockfd, "220 FTP server ready.\r\n");
 }
+
+
+int exit_process(int fd)
+{
+    Connection* c = get_connection(fd);
+    if(c)
+    {
+        c->login_status = OUT;
+    }
+    return 1;
+}

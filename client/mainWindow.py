@@ -154,6 +154,7 @@ class Ui_MainWindow(object):
         self.Tasks.setObjectName("Tasks")
         self.Tasks.setColumnCount(0)
         self.Tasks.setRowCount(0)
+        self.Tasks.horizontalHeader().setVisible(True)
         self.verticalLayout.addWidget(self.Tasks)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)

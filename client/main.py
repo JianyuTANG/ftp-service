@@ -3,10 +3,11 @@ import mainWindow
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from client import Client
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem
 import os
 from dialog import Dialog
 import shutil
+
 
 client = Client()
 app = QApplication(sys.argv)
@@ -17,6 +18,11 @@ ui.Input_port.setText('10011')
 ui.Input_ip.setText('127.0.0.1')
 ui.Input_username.setText('anonymous')
 ui.Input_password.setText('e73jzTRTNqCN9PYAAjjn')
+
+ui.Tasks.setColumnCount(3)
+ui.Tasks.setHorizontalHeaderLabels(['文件名', '任务类型', '状态'])
+ui.Tasks.setItem(2, 1, QTableWidgetItem('333'))
+task_num = 0
 
 
 def update_prompt():
@@ -180,6 +186,7 @@ def server_rmdir_button():
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose a dir or a file!')
         return
     for d in dirlist:
+        d = d.text()
         if client.remove_dir(d) == 0:
             QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to remove the dir!')
     # TODO update server file list
@@ -198,10 +205,13 @@ def server_rename_button():
     d = Dialog(MainWindow, '请输入新的文件（夹）名')
     d.exec_()
     new_name = d.get_name()
-    if client.rename(dirlist[0], new_name) == 0:
+    print(new_name)
+    if client.rename(dirlist[0].text(), new_name) == 0:
         update_prompt()
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to rename the file!')
         return
+    update_server_filelist()
+    update_prompt()
     # TODO update server file list
 
 
@@ -260,6 +270,11 @@ def store_button():
     update_prompt()
     update_server_filelist()
 
+
+def set_task(i, name, t, status):
+    ui.Tasks.setItem(i, 0, name)
+    ui.Tasks.setItem(i, 1, t)
+    ui.Tasks.setItem(i, 2, status)
 
 
 ui.Button_quit.clicked.connect(quit_button)

@@ -2,6 +2,7 @@ import os
 import socket
 import re
 
+
 pasv_re = re.compile(r'(\d*),(\d*),(\d*),(\d*),(\d*),(\d*)')
 pwd_re = re.compile('\"(.*)\"')
 
@@ -48,6 +49,7 @@ class Client:
         self.__send_msg(msg.encode())
         self.prompt_lines += [msg]
         self.prompt_lines += self.__get_reply()
+        print(self.prompt_lines[-1])
         if self.prompt_lines[-1][:3] != '227':
             return 0
         # parse ip and port
@@ -61,7 +63,10 @@ class Client:
         self.transmit_ip += ans.group(4)
         self.transmit_port = int(ans.group(5)) * 256 + int(ans.group(6))
         # build connection
-        self.data_socket.connect((self.transmit_ip, self.transmit_port))
+        try:
+            self.data_socket.connect((self.transmit_ip, self.transmit_port))
+        except:
+            return 0
         return 1
 
 
@@ -97,6 +102,7 @@ class Client:
         try:
             self.control_socket.connect((self.server_ip, self.server_port))
         except:
+            print('fail to connect')
             return 0
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '220':
@@ -257,7 +263,7 @@ class Client:
         self.prompt_lines.append(msg)
         self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
-        if self.prompt_lines[-1][:3] != '250' or self.prompt_lines[-1][:3] != '257':
+        if self.prompt_lines[-1][:3] != '250' and self.prompt_lines[-1][:3] != '257':
             return 0
         return 1
 
@@ -277,9 +283,11 @@ class Client:
         self.prompt_lines.append(msg)
         self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
+        print(self.prompt_lines[-1])
         if self.prompt_lines[-1][:3] != '350':
             return 0
-        msg = 'RNTO ' + src_filename
+
+        msg = 'RNTO ' + tgt_filename
         self.prompt_lines.append(msg)
         self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
