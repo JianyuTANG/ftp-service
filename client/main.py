@@ -21,7 +21,7 @@ ui.Input_password.setText('e73jzTRTNqCN9PYAAjjn')
 
 def update_prompt():
     data = '\n'.join(client.prompt_lines)
-    print(data)
+    #print(data)
     ui.Prompt.setText(data)
 
 
@@ -39,14 +39,16 @@ def update_server_filelist():
         client.mode = 'PASV'
     else:
         client.mode = 'PORT'
+    print('start list')
     if client.list_server() == 0:
         update_prompt()
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to LIST!')
         return
     update_prompt()
     ui.List_server.clear()
+    ui.List_server.insertItem(1, QtWidgets.QListWidgetItem('..'))
     for i, file in enumerate(client.server_file_list):
-        ui.List_server.insertItem(i + 1, QtWidgets.QListWidgetItem(file))
+        ui.List_server.insertItem(i + 2, QtWidgets.QListWidgetItem(file))
 
 
 def connect_button():
@@ -74,6 +76,7 @@ def connect_button():
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to print the directory!')
         return
     ui.Line_directory_server.setText(client.server_directory)
+    update_server_filelist()
     update_prompt()
 
 
@@ -102,8 +105,10 @@ def local_chdir_event():
     print('555')
     currentdir = dirlist[0].text()
     print(currentdir)
-    client.local_directory = os.path.join(client.local_directory, currentdir)
-    update_local_filelist()
+    tgt = os.path.join(client.local_directory, currentdir)
+    if os.path.isdir(tgt):
+        client.local_directory = tgt
+        update_local_filelist()
 
 
 def server_chdir_event():
@@ -215,11 +220,11 @@ def retrieve_button():
     if client.connection_status == 'None':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
         return
-    dirlist = ui.List_local.selectedItems()
+    dirlist = ui.List_server.selectedItems()
     if len(dirlist) != 1:
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose one file!')
         return
-    filename = dirlist[0]
+    filename = dirlist[0].text()
     if ui.radio_pasv.isChecked():
         client.mode = 'PASV'
     else:
@@ -240,7 +245,7 @@ def store_button():
     if len(dirlist) != 1:
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose one file!')
         return
-    local_filename = dirlist[0]
+    local_filename = dirlist[0].text()
     d = Dialog(MainWindow, '请输入保存至服务器的文件名')
     d.exec_()
     new_filename = d.get_name()

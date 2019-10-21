@@ -283,15 +283,35 @@ int LIST_func(int fd, char* buffer)
     }
 
     // ensure connection established
-    if(c->transmit_status == READY_PASV)
+    if(!emit_message(fd, "150 Opening binary data connection.\r\n"))
     {
-        ;
+        return 0;
     }
-    else if(c->transmit_status == READY_PORT)
+    
+    transmitStatus transmit_status = c->transmit_status;
+    c->transmit_status = TRANSMITTING;
+    int isPASV = 0;
+    if(transmit_status == READY_PASV)
     {
+        isPASV = 1;
+        c->transmit_fd = accept(c->PASV_listen_fd, NULL, NULL);
+        if(c->transmit_fd < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            close(c->PASV_listen_fd);
+            return emit_message(fd, "425 Data connection not available!\r\n");
+        }
+    }
+    else if(transmit_status == READY_PORT)
+    {
+        printf("start port connecting\n");
+        printf("%s\n", c->client_ip);
         c->transmit_fd = socket(AF_INET, SOCK_STREAM, 0);
         if(c->transmit_fd < 0)
         {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
             return emit_message(fd, "425 Data connection not available!\r\n");
         }
         struct sockaddr_in client_addr;
@@ -300,6 +320,8 @@ int LIST_func(int fd, char* buffer)
         client_addr.sin_addr.s_addr = inet_addr(c->client_ip);
         if(connect(c->transmit_fd, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
         {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
             return emit_message(fd, "425 Data connection not available!\r\n");
         }
     }
@@ -307,7 +329,41 @@ int LIST_func(int fd, char* buffer)
     {
         return emit_message(fd, "425 Data connection not available!\r\n");
     }
-    return 0;
+
+    // get LIST
+    char request[300];
+	sprintf(request, "ls %s -lh", c->current_directory);
+	FILE *ls_output = 0;
+    ls_output = popen(request, "r");
+    printf("%d\n", ls_output);
+    char block[1024];
+    int block_len = 0;
+    int counter = 0;
+    while((block_len = fread(block, 1, 1024, ls_output)) > 0)
+    {
+        counter += block_len;
+        if(write(c->transmit_fd, block, block_len) < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            return emit_message(fd, "426 Connection broken!\r\n");
+        }
+        printf("%d\n", counter);
+        printf("%s", block);
+        bzero(block, 1024);
+    }
+    fclose(ls_output);
+
+    // transmitting success
+    emit_message(fd, "226 Transfer complete.\r\n");
+    c->transmit_status = NONE;
+    close(c->transmit_fd);
+    if(isPASV)
+    {
+        close(c->PASV_listen_fd);
+    }
+    printf("finsih transmitting\n");
+    return 1;
 }
 
 int PORT_func(int fd, char* buffer)
@@ -595,7 +651,6 @@ int RETR_func(int fd, char* buffer)
 
     printf("transfered %d bytes\n", counter);
     
-
     // transmitting success
     emit_message(fd, "226 Transfer complete.\r\n");
     c->transmit_status = NONE;

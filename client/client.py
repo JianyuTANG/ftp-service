@@ -66,15 +66,18 @@ class Client:
 
 
     def __set_PORT(self):
-        self.data_socket.bind('', 0)
+        self.data_socket.bind(('', 0))
+        self.data_socket.listen(1)
         ip, port = self.data_socket.getsockname()
-        ip.replace('.', ',', 3)
+        ip = ip.replace('.', ',')
+        ip = '127,0,0,1'
         port = ',%d,%d' % (port//256, port % 256)
         msg = 'PORT ' + ip + port
+        print(msg)
         self.prompt_lines.append(msg)
         self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
-        if self.prompt_lines[-1][:3] != '227':
+        if self.prompt_lines[-1][:3] != '200':
             return 0
         self.data_socket.listen(1)
         return 1
@@ -157,40 +160,49 @@ class Client:
                 return 0
 
         # send RETR
+        print('start RETR')
         msg = 'RETR ' + filename
         self.prompt_lines.append(msg)
-        self.__send_msg(msg + '\r\n')
+        self.__send_msg((msg + '\r\n').encode())
+        print('send')
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '150':
             return 0
+        print(self.prompt_lines[-1])
 
         # accept data connection
+        sock = None
         if self.mode == 'PORT':
             sock = self.data_socket
-            self.data_socket = sock.accept()
+            self.data_socket, addr = sock.accept()
+        print(self.data_socket)
 
-        # receive data
-        content = ''
+        # receive data and write
+        try:
+            f = open(os.path.join(self.local_directory, filename), 'wb')
+        except:
+            return 0
         while True:
-            block = self.data_socket.recv(1024)
-            content += block
-            if not block:
+            try:
+                block = self.data_socket.recv(1024)
+            except:
+                print('fail')
+                return 0
+            if len(block) <= 0:
                 break
+            try:
+                f.write(block)
+            except:
+                return 0
         self.__close_socket(1)
         if self.mode == 'PORT':
             sock.close()
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '226':
             return 0
+        print(self.prompt_lines[-1])
 
-        # write data
-        try:
-            f = open(os.path.join(self.local_directory, filename), 'wb')
-            f.write(content)
-            f.close()
-        except:
-            return 0
-
+        f.close()
         return 1
 
 
@@ -206,7 +218,7 @@ class Client:
 
         # read local file
         try:
-            f = open(os.path.join(self.local_directory, local_filename), 'wb')
+            f = open(os.path.join(self.local_directory, local_filename), 'rb')
             content = f.read()
             f.close()
         except:
@@ -221,16 +233,13 @@ class Client:
             return 0
 
         # accept data connection
+        sock = None
         if self.mode == 'PORT':
             sock = self.data_socket
-            self.data_socket = sock.accept()
+            self.data_socket, addr = sock.accept()
 
         # send data
-        len = len(content)
         self.data_socket.sendall(content)
-        #for cursor in range(0, len, 1024):
-        #    block = content[cursor:min(len, cursor + 1024)]
-        #    self.data_socket.sendall(block)
         self.__close_socket(1)
         if self.mode == 'PORT':
             sock.close()
@@ -280,6 +289,7 @@ class Client:
 
 
     def list_server(self):
+        print('real start')
         if self.mode == 'PASV':
             # set pasv mode
             if self.__set_PASV() == 0:
@@ -288,6 +298,7 @@ class Client:
             # set port mode
             if self.__set_PORT() == 0:
                 return 0
+        print('mode finish')
 
         # send LIST
         msg = 'LIST'
@@ -296,18 +307,27 @@ class Client:
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '150':
             return 0
+        print(self.prompt_lines[-1])
 
         # accept data connection
+        sock = None
         if self.mode == 'PORT':
             sock = self.data_socket
-            self.data_socket = sock.accept()
+            self.data_socket, addr = sock.accept()
+        print('accepted')
+        print(self.data_socket)
+
 
         # receive data
         data = ''
         while True:
-            block = self.data_socket.recv(1024)
+            try:
+                block = self.data_socket.recv(1024).decode()
+            except:
+                print('fail')
+            print('1')
             data += block
-            if not block:
+            if len(block) <= 0:
                 break
         self.__close_socket(1)
         if self.mode == 'PORT':
@@ -315,12 +335,20 @@ class Client:
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '226':
             return 0
+        print(self.prompt_lines[-1])
+
+        print('finish transmitting')
+
 
         # parse data
         self.server_file_list.clear()
-        data = data.split('\r\n')[:-1]
+        print(data.splitlines())
+        data = data.splitlines()[1:]
+
         for f in data:
+            print(f)
             self.server_file_list.append(f.split(' ')[-1])
+        print(self.server_file_list)
 
         return 1
 

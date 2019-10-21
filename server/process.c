@@ -70,6 +70,7 @@ int process(int fd)
                 {
                     // call
                     int result = (*ftp_func[i])(fd, buffer);
+                    // printf("6666\n");
                     return result;
                 }
             }

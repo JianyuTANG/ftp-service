@@ -7,9 +7,10 @@ char my_ip[50];
 
 int main(int argc, char **argv)
 {
-    //get_my_ip();
-    strcpy(my_ip, "127.0.0.1");
+    get_my_ip();
+    //strcpy(my_ip, "127.0.0.1");
     printf("hello\n");
+    printf("%s\n", my_ip);
 
     // process arugments
     if(argc != 1 && argc != 5 && argc != 3)
@@ -155,6 +156,7 @@ int main(int argc, char **argv)
 				}
                 printf("new command\n");
                 process(fd);
+                // printf("8888\n");
             }
         }
     }
