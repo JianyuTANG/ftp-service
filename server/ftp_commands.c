@@ -625,9 +625,31 @@ int RETR_func(int fd, char* buffer)
     {
         printf("reading file failure\n");
         c->transmit_status = NONE;
+        c->REST_cursor = 0;
         close(c->transmit_fd);
+        if(isPASV)
+        {
+            close(c->PASV_listen_fd);
+        }
         return emit_message(fd, "451 Fail to read the file!\r\n");
     }
+    if(c->REST_cursor > 0)
+    {
+        int offset = lseek(filefd, c->REST_cursor, SEEK_CUR);
+        if(offset < 0)
+        {
+            printf("reading file failure\n");
+            c->transmit_status = NONE;
+            c->REST_cursor = 0;
+            close(c->transmit_fd);
+            if(isPASV)
+            {
+                close(c->PASV_listen_fd);
+            }
+            return emit_message(fd, "451 Fail to read the file!\r\n");
+        }
+    }
+    /*
     char file_buf[BUFFER_SIZE];
     bzero(file_buf, BUFFER_SIZE);
     int block_len = 0;
@@ -641,6 +663,10 @@ int RETR_func(int fd, char* buffer)
         {
             c->transmit_status = NONE;
             close(c->transmit_fd);
+            if(isPASV)
+            {
+                close(c->PASV_listen_fd);
+            }
             return emit_message(fd, "426 Connection broken!\r\n");
         }
         bzero(file_buf, BUFFER_SIZE);
@@ -658,6 +684,14 @@ int RETR_func(int fd, char* buffer)
         close(c->PASV_listen_fd);
     }
     printf("finsih transmitting\n");
+    */
+    threadArgs *args = (threadArgs *)malloc(sizeof(threadArgs));
+    args->fd = fd;
+    args->c = c;
+    args->filefd = filefd;
+    args->isPASV = isPASV;
+    pthread_t tid;
+    pthread_create(&tid, NULL, send_file, args);
     return 1;
 }
 
@@ -692,7 +726,17 @@ int STOR_func(int fd, char* buffer)
     {
         return emit_message(fd, "452 Can not create the file!\r\n");
     }
-
+    if(c->REST_cursor > 0)
+    {
+        int offset = lseek(filefd, c->REST_cursor, SEEK_CUR);
+        c->REST_cursor = 0;
+        if(offset < 0)
+        {
+            printf("reading file failure\n");
+            c->transmit_status = NONE;
+            return emit_message(fd, "451 Fail to read the file!\r\n");
+        }
+    }
 
     // ensure connection established
     if(!emit_message(fd, "150 Opening binary data connection.\r\n"))
@@ -742,6 +786,14 @@ int STOR_func(int fd, char* buffer)
     // start transmitting data
 
     // read the file from TCP buffer
+    threadArgs *args = (threadArgs *)malloc(sizeof(threadArgs));
+    args->fd = fd;
+    args->c = c;
+    args->filefd = filefd;
+    args->isPASV = isPASV;
+    pthread_t tid;
+    pthread_create(&tid, NULL, receive_file, args);
+    /*
     char file_buf[BUFFER_SIZE];
     bzero(file_buf, BUFFER_SIZE);
     int block_len = 0;
@@ -751,6 +803,7 @@ int STOR_func(int fd, char* buffer)
         {
             c->transmit_status = NONE;
             close(c->transmit_fd);
+            close(filefd);
             return emit_message(fd, "426 Connection broken!\r\n");
         }
         else if(block_len == 0)
@@ -770,9 +823,33 @@ int STOR_func(int fd, char* buffer)
         close(c->PASV_listen_fd);
     }
     return emit_message(fd, "226 Transfer complete.\r\n");
+    */
+   return 1;
 }
+
 
 int REST_func(int fd, char* buffer)
 {
+    Connection* c = get_connection(fd);
+    if(c->transmit_status == TRANSMITTING)
+    {
+        return 1;
+    }
+    if(c->login_status < LOGGED_IN)
+    {
+        return emit_message(fd, "530 Hasn't logged in yet.\r\n");
+    }
+    if(buffer[4] != ' ')
+    {
+        // Need parameters
+        return emit_message(fd, "500 Unknown command!\r\n");
+    }
+    int parameter = atoi(buffer + 5);
+    if(parameter <= 0)
+    {
+        return emit_message(fd, "500 Unknown command!\r\n");
+    }
+    c->REST_cursor = parameter;
+    return emit_message(fd, "350 Unknown command!\r\n");
     return 0;
 }

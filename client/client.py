@@ -61,6 +61,7 @@ class Client:
         for i in range(1, 4):
             self.transmit_ip += ans.group(i) + '.'
         self.transmit_ip += ans.group(4)
+        self.transmit_ip = self.server_ip
         self.transmit_port = int(ans.group(5)) * 256 + int(ans.group(6))
         # build connection
         try:
@@ -193,12 +194,14 @@ class Client:
                 block = self.data_socket.recv(1024)
             except:
                 print('fail')
+                f.close()
                 return 0
             if len(block) <= 0:
                 break
             try:
                 f.write(block)
             except:
+                f.close()
                 return 0
         self.__close_socket(1)
         if self.mode == 'PORT':
@@ -337,6 +340,7 @@ class Client:
             data += block
             if len(block) <= 0:
                 break
+        print(data)
         self.__close_socket(1)
         if self.mode == 'PORT':
             sock.close()

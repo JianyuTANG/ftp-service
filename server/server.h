@@ -16,6 +16,7 @@
 #include <sys/ioctl.h> 
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 
 #define DIRECTORY_SIZE 200
 #define BUFFER_SIZE 2048
@@ -51,7 +52,16 @@ typedef struct Connection
     int transmit_port;
     char client_ip[100];
     int client_port;
+    int REST_cursor;
 } Connection;
+
+typedef struct ThreadArg
+{
+    int filefd;
+    Connection *c;
+    int isPASV;
+    int fd;
+} threadArgs;
 
 extern int server_port;
 extern char default_path[DIRECTORY_SIZE];
@@ -87,6 +97,8 @@ void register_connection(int fd, Connection* p);
 Connection* get_connection(int fd);
 int get_available_port();
 void get_my_ip();
+void *receive_file(void *arg);
+void *send_file(void *arg);
 
 int emit_message(int fd, char *msg);
 

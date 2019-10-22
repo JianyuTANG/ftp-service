@@ -238,6 +238,7 @@ def retrieve_button():
     seq = task_num
     task_num += 1
     set_task(seq, filename, 'RETRIEVE', '传输中')
+    QApplication.processEvents()
     if ui.radio_pasv.isChecked():
         client.mode = 'PASV'
     else:
@@ -268,6 +269,7 @@ def store_button():
     seq = task_num
     task_num += 1
     set_task(seq, local_filename, 'STORE', '传输中')
+    QApplication.processEvents()
     if ui.radio_pasv.isChecked():
         client.mode = 'PASV'
     else:

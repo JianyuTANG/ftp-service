@@ -1,5 +1,4 @@
 import client
-import socket
 
 
 c = client.Client()

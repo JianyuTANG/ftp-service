@@ -79,3 +79,89 @@ void get_my_ip()
 	getsockname(listenfd, (struct sockaddr *)&addr, &n);
 	inet_ntop(AF_INET, &(addr.sin_addr), my_ip, INET_ADDRSTRLEN);
 }
+
+void *receive_file(void *arg)
+{
+    threadArgs *args = (threadArgs *)arg;
+    int filefd = args->filefd;
+    Connection *c = args->c;
+    int isPASV = args->isPASV;
+    int fd = args->fd;
+    char file_buf[BUFFER_SIZE];
+    bzero(file_buf, BUFFER_SIZE);
+    int block_len = 0;
+    while(1)
+    {
+        if((block_len = read(c->transmit_fd, file_buf, BUFFER_SIZE)) < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            close(filefd);
+            emit_message(fd, "426 Connection broken!\r\n");
+            return NULL;
+        }
+        else if(block_len == 0)
+        {
+            break;
+        }
+        write(filefd, file_buf, block_len);
+        bzero(file_buf, BUFFER_SIZE);
+    }
+    close(filefd);
+
+    // transmitting success
+    c->transmit_status = NONE;
+    close(c->transmit_fd);
+    if(isPASV)
+    {
+        close(c->PASV_listen_fd);
+    }
+    emit_message(fd, "226 Transfer complete.\r\n");
+    return NULL;
+}
+
+
+void *send_file(void *arg)
+{
+    threadArgs *args = (threadArgs *)arg;
+    int filefd = args->filefd;
+    Connection *c = args->c;
+    int isPASV = args->isPASV;
+    int fd = args->fd;
+    char file_buf[BUFFER_SIZE];
+    bzero(file_buf, BUFFER_SIZE);
+    int block_len = 0;
+    printf("start reading file\n");
+    int counter = 0;
+    while((block_len = read(filefd, file_buf, BUFFER_SIZE)) > 0)
+    {
+        // printf("block\n");
+        counter += block_len;
+        if(write(c->transmit_fd, file_buf, block_len) < 0)
+        {
+            c->transmit_status = NONE;
+            close(c->transmit_fd);
+            if(isPASV)
+            {
+                close(c->PASV_listen_fd);
+            }
+            emit_message(fd, "426 Connection broken!\r\n");
+            return NULL;
+        }
+        bzero(file_buf, BUFFER_SIZE);
+    }
+    close(filefd);
+
+    printf("transfered %d bytes\n", counter);
+    
+    // transmitting success
+    emit_message(fd, "226 Transfer complete.\r\n");
+    c->transmit_status = NONE;
+    close(c->transmit_fd);
+    if(isPASV)
+    {
+        close(c->PASV_listen_fd);
+    }
+    printf("finsih transmitting\n");
+    return NULL;
+}

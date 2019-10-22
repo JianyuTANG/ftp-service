@@ -20,8 +20,7 @@ int change_working_directory(char *buffer, Connection *c)
         return 0;
     }
     closedir(dp);
-    join_path(c->current_directory, buffer);
-    return 1;
+    return join_path(c->current_directory, buffer);
 }
 
 int make_dir(char *dirname, char *current_directory)
@@ -123,7 +122,10 @@ int rename_file(char *tgt_filename, char *src_filename, char *current_directory)
     strcpy(src, current_directory);
     join_path(src, src_filename);
     strcpy(tgt, current_directory);
-    join_path(tgt, tgt_filename);
+    if(join_path(tgt, tgt_filename) == 0)
+    {
+        return 0;
+    }
     if(!rename(src, tgt))
     {
         return 1;
@@ -133,6 +135,8 @@ int rename_file(char *tgt_filename, char *src_filename, char *current_directory)
 
 int join_path(char *source, char *target)
 {
+    char temp[DIRECTORY_SIZE];
+    strcpy(temp, source);
     if(target[0] == '/')
     {
         // absolute path
@@ -235,6 +239,18 @@ int join_path(char *source, char *target)
             {
                 sprintf(source, "%s%s", source, target_dir + pos[i]);
             }
+        }
+    }
+
+    // security check 
+    // reject .. in root directory
+    int len = strlen(default_path);
+    for(int j = 0; j < len; j++)
+    {
+        if(source[j] == '\0' || source[j] != default_path[j])
+        {
+            strcpy(source, temp);
+            return 0;
         }
     }
     return 1;
