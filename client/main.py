@@ -21,7 +21,6 @@ ui.Input_password.setText('e73jzTRTNqCN9PYAAjjn')
 
 ui.Tasks.setColumnCount(3)
 ui.Tasks.setHorizontalHeaderLabels(['文件名', '任务类型', '状态'])
-ui.Tasks.setItem(2, 1, QTableWidgetItem('333'))
 task_num = 0
 
 
@@ -235,15 +234,21 @@ def retrieve_button():
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose one file!')
         return
     filename = dirlist[0].text()
+    global task_num
+    seq = task_num
+    task_num += 1
+    set_task(seq, filename, 'RETRIEVE', '传输中')
     if ui.radio_pasv.isChecked():
         client.mode = 'PASV'
     else:
         client.mode = 'PORT'
     if client.retrieve_file(filename) == 0:
+        set_task(seq, filename, 'RETRIEVE', '失败')
         update_prompt()
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to retrieve the file!')
         return
     update_prompt()
+    set_task(seq, filename, 'RETRIEVE', '已完成')
     update_local_filelist()
 
 
@@ -259,22 +264,34 @@ def store_button():
     d = Dialog(MainWindow, '请输入保存至服务器的文件名')
     d.exec_()
     new_filename = d.get_name()
+    global task_num
+    seq = task_num
+    task_num += 1
+    set_task(seq, local_filename, 'STORE', '传输中')
     if ui.radio_pasv.isChecked():
         client.mode = 'PASV'
     else:
         client.mode = 'PORT'
     if client.store_file(local_filename, new_filename) == 0:
         update_prompt()
+        set_task(seq, local_filename, 'STORE', '失败')
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to store the file!')
         return
     update_prompt()
+    set_task(seq, local_filename, 'STORE', '已完成')
     update_server_filelist()
 
 
 def set_task(i, name, t, status):
-    ui.Tasks.setItem(i, 0, name)
-    ui.Tasks.setItem(i, 1, t)
-    ui.Tasks.setItem(i, 2, status)
+    row_num = ui.Tasks.rowCount()
+    if i == row_num:
+        ui.Tasks.insertRow(row_num)
+    elif i > row_num:
+        return 0
+    ui.Tasks.setItem(i, 0, QTableWidgetItem(name))
+    ui.Tasks.setItem(i, 1, QTableWidgetItem(t))
+    ui.Tasks.setItem(i, 2, QTableWidgetItem(status))
+    return 1
 
 
 ui.Button_quit.clicked.connect(quit_button)
