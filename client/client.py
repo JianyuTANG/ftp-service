@@ -157,13 +157,16 @@ class Client:
 
 
     def retrieve_file(self, filename):
+        self.transmitting_status = 'transmitting'
         if self.mode == 'PASV':
             # set pasv mode
             if self.__set_PASV() == 0:
+                self.transmitting_status = 'None'
                 return 0
         else:
             # set port mode
             if self.__set_PORT() == 0:
+                self.transmitting_status = 'None'
                 return 0
 
         # send RETR
@@ -174,6 +177,7 @@ class Client:
         print('send')
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '150':
+            self.transmitting_status = 'None'
             return 0
         print(self.prompt_lines[-1])
 
@@ -188,6 +192,7 @@ class Client:
         try:
             f = open(os.path.join(self.local_directory, filename), 'wb')
         except:
+            self.transmitting_status = 'None'
             return 0
         while True:
             try:
@@ -195,6 +200,7 @@ class Client:
             except:
                 print('fail')
                 f.close()
+                self.transmitting_status = 'None'
                 return 0
             if len(block) <= 0:
                 break
@@ -202,27 +208,33 @@ class Client:
                 f.write(block)
             except:
                 f.close()
+                self.transmitting_status = 'None'
                 return 0
         self.__close_socket(1)
         if self.mode == 'PORT':
             sock.close()
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '226':
+            self.transmitting_status = 'None'
             return 0
         print(self.prompt_lines[-1])
 
         f.close()
+        self.transmitting_status = 'None'
         return 1
 
 
     def store_file(self, local_filename, server_filename):
+        self.transmitting_status = 'transmitting'
         if self.mode == 'PASV':
             # set pasv mode
             if self.__set_PASV() == 0:
+                self.transmitting_status = 'None'
                 return 0
         else:
             # set port mode
             if self.__set_PORT() == 0:
+                self.transmitting_status = 'None'
                 return 0
 
         # read local file
@@ -231,6 +243,7 @@ class Client:
             content = f.read()
             f.close()
         except:
+            self.transmitting_status = 'None'
             return 0
 
         # send STOR
@@ -239,6 +252,7 @@ class Client:
         self.__send_msg((msg + '\r\n').encode())
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '150':
+            self.transmitting_status = 'None'
             return 0
 
         # accept data connection
@@ -256,8 +270,10 @@ class Client:
         # finish transmitting
         self.prompt_lines += self.__get_reply()
         if self.prompt_lines[-1][:3] != '226':
+            self.transmitting_status = 'None'
             return 0
 
+        self.transmitting_status = 'None'
         return 1
 
 

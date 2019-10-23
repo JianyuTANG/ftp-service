@@ -1,12 +1,12 @@
 import sys
 import mainWindow
-from PyQt5.QtWidgets import QApplication, QMainWindow
 from client import Client
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem
+from PyQt5 import QtWidgets, QtGui
+from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QApplication, QMainWindow
 import os
 from dialog import Dialog
 import shutil
+from multi_thread import MyThread
 
 
 client = Client()
@@ -22,12 +22,37 @@ ui.Input_password.setText('e73jzTRTNqCN9PYAAjjn')
 ui.Tasks.setColumnCount(3)
 ui.Tasks.setHorizontalHeaderLabels(['文件名', '任务类型', '状态'])
 task_num = 0
+t = MyThread()
 
 
 def update_prompt():
     data = '\n'.join(client.prompt_lines)
-    #print(data)
     ui.Prompt.setText(data)
+
+
+t.update_prompt_signal.connect(update_prompt)
+
+
+def move_end():
+    ui.Prompt.moveCursor(QtGui.QTextCursor.End)
+
+
+ui.Prompt.textChanged.connect(move_end)
+
+
+def set_task(i, name, ti, status):
+    row_num = ui.Tasks.rowCount()
+    if i == row_num:
+        ui.Tasks.insertRow(row_num)
+    elif i > row_num:
+        return 0
+    ui.Tasks.setItem(i, 0, QTableWidgetItem(name))
+    ui.Tasks.setItem(i, 1, QTableWidgetItem(ti))
+    ui.Tasks.setItem(i, 2, QTableWidgetItem(status))
+    return 1
+
+
+t.set_task_signal.connect(set_task)
 
 
 def update_local_filelist():
@@ -37,6 +62,9 @@ def update_local_filelist():
     ui.Line_directory_local.setText(directory)
     for i, file in enumerate(filelist):
         ui.List_local.insertItem(i + 1, QtWidgets.QListWidgetItem(file))
+
+
+t.update_local_list_signal.connect(update_local_filelist)
 
 
 def update_server_filelist():
@@ -54,6 +82,9 @@ def update_server_filelist():
     ui.List_server.insertItem(1, QtWidgets.QListWidgetItem('..'))
     for i, file in enumerate(client.server_file_list):
         ui.List_server.insertItem(i + 2, QtWidgets.QListWidgetItem(file))
+
+
+t.update_server_list_signal.connect(update_server_filelist)
 
 
 def connect_button():
@@ -120,6 +151,9 @@ def server_chdir_event():
     if client.connection_status == 'None':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
         return
+    if client.transmitting_status != 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Now transmitting, please wait!')
+        return
     dirlist = ui.List_server.selectedItems()
     currentdir = dirlist[0].text()
     if client.change_dir(currentdir) == 0:
@@ -147,6 +181,9 @@ def local_mkdir_button():
 def server_mkdir_button():
     if client.connection_status == 'None':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    if client.transmitting_status != 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Now transmitting, please wait!')
         return
     # TODO add input dialog
     d = Dialog(MainWindow, '请输入新的文件（夹）名')
@@ -180,6 +217,9 @@ def server_rmdir_button():
     if client.connection_status == 'None':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
         return
+    if client.transmitting_status != 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Now transmitting, please wait!')
+        return
     dirlist = ui.List_server.selectedItems()
     if len(dirlist) == 0:
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose a dir or a file!')
@@ -196,6 +236,9 @@ def server_rmdir_button():
 def server_rename_button():
     if client.connection_status == 'None':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    if client.transmitting_status != 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Now transmitting, please wait!')
         return
     dirlist = ui.List_server.selectedItems()
     if len(dirlist) != 1:
@@ -222,12 +265,18 @@ def server_refresh_button():
     if client.connection_status == 'None':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
         return
+    if client.transmitting_status != 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Now transmitting, please wait!')
+        return
     update_server_filelist()
 
 
 def retrieve_button():
     if client.connection_status == 'None':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    if client.transmitting_status != 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Now transmitting, please wait!')
         return
     dirlist = ui.List_server.selectedItems()
     if len(dirlist) != 1:
@@ -243,6 +292,7 @@ def retrieve_button():
         client.mode = 'PASV'
     else:
         client.mode = 'PORT'
+    '''
     if client.retrieve_file(filename) == 0:
         set_task(seq, filename, 'RETRIEVE', '失败')
         update_prompt()
@@ -251,11 +301,37 @@ def retrieve_button():
     update_prompt()
     set_task(seq, filename, 'RETRIEVE', '已完成')
     update_local_filelist()
+    '''
+    args = (filename, seq)
+    t.set_func_agrs(receive_file, args)
+    try:
+        t.start()
+    except:
+        print('555')
+
+
+def receive_file(args, signal, signal1, signal2, signal3):
+    print('start retrieve')
+    filename = args[0]
+    seq = args[1]
+    if client.retrieve_file(filename) == 0:
+        signal1.emit(seq, filename, 'RETRIEVE', '失败')
+        signal.emit()
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to retrieve the file!')
+        return
+    print('retrieve finish')
+    signal.emit()
+    signal1.emit(seq, filename, 'RETRIEVE', '已完成')
+    signal2.emit()
+    print('retrieve finish')
 
 
 def store_button():
     if client.connection_status == 'None':
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
+        return
+    if client.transmitting_status != 'None':
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Now transmitting, please wait!')
         return
     dirlist = ui.List_local.selectedItems()
     if len(dirlist) != 1:
@@ -274,6 +350,10 @@ def store_button():
         client.mode = 'PASV'
     else:
         client.mode = 'PORT'
+    args = (local_filename, new_filename, seq)
+    t.set_func_agrs(send_file, args)
+    t.start()
+    '''
     if client.store_file(local_filename, new_filename) == 0:
         update_prompt()
         set_task(seq, local_filename, 'STORE', '失败')
@@ -282,18 +362,24 @@ def store_button():
     update_prompt()
     set_task(seq, local_filename, 'STORE', '已完成')
     update_server_filelist()
+    '''
 
 
-def set_task(i, name, t, status):
-    row_num = ui.Tasks.rowCount()
-    if i == row_num:
-        ui.Tasks.insertRow(row_num)
-    elif i > row_num:
-        return 0
-    ui.Tasks.setItem(i, 0, QTableWidgetItem(name))
-    ui.Tasks.setItem(i, 1, QTableWidgetItem(t))
-    ui.Tasks.setItem(i, 2, QTableWidgetItem(status))
-    return 1
+def send_file(args, signal, signal1, signal2, signal3):
+    local_filename = args[0]
+    new_filename = args[1]
+    seq = args[2]
+    if client.store_file(local_filename, new_filename) == 0:
+        signal.emit()
+        signal1.emit(seq, local_filename, 'STORE', '失败')
+        QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to store the file!')
+        return
+    signal.emit()
+    signal1.emit(seq, local_filename, 'STORE', '已完成')
+    signal3.emit()
+
+
+
 
 
 ui.Button_quit.clicked.connect(quit_button)
