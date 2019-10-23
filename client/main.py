@@ -2,7 +2,7 @@ import sys
 import mainWindow
 from client import Client
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QApplication, QMainWindow
+from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QApplication, QMainWindow, QMessageBox
 import os
 from dialog import Dialog
 import shutil
@@ -283,6 +283,18 @@ def retrieve_button():
         QtWidgets.QMessageBox.warning(None, 'warning', 'Please choose one file!')
         return
     filename = dirlist[0].text()
+    offset = 0
+    if os.path.isfile(os.path.join(client.local_directory, filename)):
+        ret = QMessageBox.question(MainWindow,
+                                   "是否断点续传",
+                                   "文件已在本地存在，是否断点续传?",
+                                   QMessageBox.Yes | QMessageBox.No,
+                                   QMessageBox.No)
+        if ret == QMessageBox.Yes:
+            filesize = os.path.getsize(os.path.join(client.local_directory, filename))
+            if client.send_REST(filesize):
+                offset = filesize
+
     global task_num
     seq = task_num
     task_num += 1
@@ -302,7 +314,7 @@ def retrieve_button():
     set_task(seq, filename, 'RETRIEVE', '已完成')
     update_local_filelist()
     '''
-    args = (filename, seq)
+    args = (filename, seq, offset)
     t.set_func_agrs(receive_file, args)
     try:
         t.start()
@@ -314,16 +326,16 @@ def receive_file(args, signal, signal1, signal2, signal3):
     print('start retrieve')
     filename = args[0]
     seq = args[1]
+    client.offset = args[2]
     if client.retrieve_file(filename) == 0:
         signal1.emit(seq, filename, 'RETRIEVE', '失败')
         signal.emit()
         QtWidgets.QMessageBox.warning(None, 'warning', 'Fail to retrieve the file!')
         return
-    print('retrieve finish')
     signal.emit()
     signal1.emit(seq, filename, 'RETRIEVE', '已完成')
     signal2.emit()
-    print('retrieve finish')
+    client.offset = 0
 
 
 def store_button():
@@ -379,9 +391,6 @@ def send_file(args, signal, signal1, signal2, signal3):
     signal3.emit()
 
 
-
-
-
 ui.Button_quit.clicked.connect(quit_button)
 ui.Button_connect.clicked.connect(connect_button)
 ui.Button_browse_local.clicked.connect(browse_button)
@@ -398,4 +407,3 @@ ui.List_server.doubleClicked.connect(server_chdir_event)
 ui.List_local.doubleClicked.connect(local_chdir_event)
 MainWindow.show()
 sys.exit(app.exec())
-

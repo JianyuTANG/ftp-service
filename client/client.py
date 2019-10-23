@@ -18,6 +18,7 @@ class Client:
         self.connection_status = 'None'
         self.transmitting_status = 'None'
         self.mode = 'PASV'
+        self.offset = 0
         self.control_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.local_directory = os.getcwd()
@@ -190,7 +191,11 @@ class Client:
 
         # receive data and write
         try:
-            f = open(os.path.join(self.local_directory, filename), 'wb')
+            f = None
+            if self.offset == 0:
+                f = open(os.path.join(self.local_directory, filename), 'wb')
+            else:
+                f = open(os.path.join(self.local_directory, filename), 'ab')
         except:
             self.transmitting_status = 'None'
             return 0
@@ -404,5 +409,16 @@ class Client:
         self.prompt_lines += self.__get_reply()
         ans = self.prompt_lines[-1]
         if ans[:3] != '250':
+            return 0
+        return 1
+
+
+    def send_REST(self, offset):
+        msg = 'REST ' + str(offset)
+        self.prompt_lines.append(msg)
+        self.__send_msg((msg + '\r\n').encode())
+        self.prompt_lines += self.__get_reply()
+        ans = self.prompt_lines[-1]
+        if ans[:3] != '350':
             return 0
         return 1
