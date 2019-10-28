@@ -376,7 +376,7 @@ class Client:
         # parse data
         self.server_file_list.clear()
         print(data.splitlines())
-        data = data.splitlines()[1:]
+        data = data.splitlines()
 
         for f in data:
             print(f)
