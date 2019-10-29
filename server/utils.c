@@ -145,6 +145,7 @@ void *send_file(void *arg)
             {
                 close(c->PASV_listen_fd);
             }
+            printf("connection broken\n");
             emit_message(fd, "426 Connection broken!\r\n");
             return NULL;
         }

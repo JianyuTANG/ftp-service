@@ -168,7 +168,7 @@
            <item>
             <widget class="QPushButton" name="Button_rmdir_local">
              <property name="text">
-              <string>rmdir</string>
+              <string>delete</string>
              </property>
             </widget>
            </item>
@@ -226,6 +226,13 @@
             <widget class="QPushButton" name="Button_rmdir_server">
              <property name="text">
               <string>rmdir</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="Button_stop">
+             <property name="text">
+              <string>stop_transmission</string>
              </property>
             </widget>
            </item>

@@ -380,7 +380,11 @@ class Client:
 
         for f in data:
             print(f)
-            self.server_file_list.append(f.split(' ')[-1])
+            if f[0] != 't':
+                filename = f.split()[8:]
+                print(filename)
+                filename = ' '.join(filename)
+                self.server_file_list.append(filename)
         print(self.server_file_list)
 
         return 1

@@ -74,9 +74,9 @@ int process(int fd)
                     return result;
                 }
             }
-            return 0;
-        }    
+        }
     }
+    emit_message(fd, "550 Unkown command!\r\n");
     return 0;
 }
 

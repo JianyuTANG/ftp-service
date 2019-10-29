@@ -149,8 +149,22 @@ int PWD_func(int fd, char* buffer)
     {
         return emit_message(fd, "530 Hasn't logged in yet.\r\n");
     }
+    char temp_directory[200];
+    strcpy(temp_directory, default_path);
+    int n = strlen(default_path);
+    int k = strlen(c->current_directory);
+    int l = k - n;
+    for(int i = 0; i < l; i++)
+    {
+        temp_directory[i] = c->current_directory[i + n];
+    }
+    if(l == 0)
+    {
+        temp_directory[0] = '/';
+    }
+    temp_directory[l + 1] = '\0';
     char ret_msg[350];
-    sprintf(ret_msg, "257 \"%s%s", c->current_directory, "\"\r\n");
+    sprintf(ret_msg, "257 \"%s%s", temp_directory, "\"\r\n");
     return emit_message(fd, ret_msg);
     /*
     char current_directory[DIRECTORY_SIZE];
