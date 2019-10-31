@@ -390,19 +390,6 @@ def send_file(args, signal, signal1, signal2, signal3):
     signal1.emit(seq, local_filename, 'STORE', '已完成')
     signal3.emit()
 
-
-def stop_transmission():
-    if client.connection_status == 'None':
-        QtWidgets.QMessageBox.warning(None, 'warning', 'Please connect first!')
-        return
-    if client.transmitting_status != 'transmitting':
-        QtWidgets.QMessageBox.warning(None, 'warning', 'No transmitting open!')
-        return
-    client.transmit_port.close()
-    client.transmitting_status = 'None'
-
-
-
 ui.Button_quit.clicked.connect(quit_button)
 ui.Button_connect.clicked.connect(connect_button)
 ui.Button_browse_local.clicked.connect(browse_button)
@@ -417,6 +404,5 @@ ui.Button_rename_server.clicked.connect(server_rename_button)
 ui.Button_retrieve_server.clicked.connect(retrieve_button)
 ui.List_server.doubleClicked.connect(server_chdir_event)
 ui.List_local.doubleClicked.connect(local_chdir_event)
-ui.Button_stop.clicked.connect(stop_transmission)
 MainWindow.show()
 sys.exit(app.exec())
