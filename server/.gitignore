@@ -5,6 +5,8 @@
 */*
 *.data
 
+server
+
 # Object files
 *.o
 *.ko

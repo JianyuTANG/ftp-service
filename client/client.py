@@ -138,6 +138,13 @@ class Client:
         if self.prompt_lines[-1][:3] != '200':
             return 0
 
+        msg = 'SYST'
+        self.prompt_lines.append(msg)
+        self.__send_msg((msg + '\r\n').encode())
+        self.prompt_lines += self.__get_reply()
+        if self.prompt_lines[-1][:3] != '215':
+            return 0
+
         # now login succeed
         self.connection_status = 'logged in'
         self.local_directory = os.getcwd()
